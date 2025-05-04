@@ -1,0 +1,78 @@
+#include <allegro.h>
+
+#define LARGEUR_ECRAN 800
+#define HAUTEUR_ECRAN 462
+#define LARGEUR_DECOR 2340
+#define HAUTEUR_DECOR 462
+#define VITESSE_SCROLL 2
+#define VITESSE_VAISSEAU 3
+
+int main() {
+    allegro_init();
+    install_keyboard();
+    set_color_depth(desktop_color_depth());
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
+
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+    // === CHARGEMENT DU DÉCOR ===
+    BITMAP *decor = load_bitmap("biome2.bmp", NULL);
+    if (!decor) {
+        allegro_message("Erreur : impossible de charger 'decor9.bmp'");
+        return 1;
+    }
+    allegro_message("BMP chargé : %d x %d", decor->w, decor->h);
+
+    // === CHARGEMENT DU VAISSEAU (singe) ===
+    BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
+    if (!vaisseau_img) {
+        allegro_message("Erreur : impossible de charger 'winged_monkey_small.bmp'");
+        return 1;
+    }
+
+    // Rend le magenta transparent
+
+
+    int vaisseau_x = 100;
+    int vaisseau_y = HAUTEUR_ECRAN / 2;
+    int camera_x = 0;
+
+    while (!key[KEY_ESC]) {
+        // Scroll de la caméra
+        camera_x += VITESSE_SCROLL;
+        if (camera_x > (LARGEUR_DECOR - LARGEUR_ECRAN))
+            camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+
+        // Contrôle du vaisseau
+        if (key[KEY_RIGHT]) {
+            vaisseau_x += VITESSE_VAISSEAU;
+        }
+        if (key[KEY_LEFT]) vaisseau_x -= VITESSE_VAISSEAU;
+        if (key[KEY_UP]) vaisseau_y -= VITESSE_VAISSEAU;
+        if (key[KEY_DOWN]) vaisseau_y += VITESSE_VAISSEAU;
+
+        // Limites de l’écran
+        if (vaisseau_x < 0) vaisseau_x = 0;
+        if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
+        if (vaisseau_y < 0) vaisseau_y = 0;
+        if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
+
+        // === DESSIN ===
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+        int vaisseau_aff_x = vaisseau_x - camera_x;
+        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+        int c=vaisseau_x*100/LARGEUR_DECOR;
+        textprintf_ex(buffer,font,350,50,makecol(0,0,0),-1,"Niveau 1:%d ",c);
+
+        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+        rest(20); // 50 FPS
+    }
+    allegro_exit();
+    destroy_bitmap(buffer);
+    destroy_bitmap(decor);
+    destroy_bitmap(vaisseau_img);
+    return 0;
+}
+END_OF_MAIN();
