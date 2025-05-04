@@ -14,4 +14,5 @@ void sauvegarder_partie(const char* nom_fichier, int vaisseau_x, int vaisseau_y,
     fprintf(f, "%d\n", en_pause);
 
     fclose(f);
+    allegro_message("Partie sauvegardée !");
     }
