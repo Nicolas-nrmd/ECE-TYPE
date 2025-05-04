@@ -1,0 +1,130 @@
+#include <allegro.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define LARGEUR_ECRAN 800
+#define HAUTEUR_ECRAN 462
+#define LARGEUR_DECOR 2340
+#define HAUTEUR_DECOR 462
+#define VITESSE_SCROLL 2
+#define VITESSE_VAISSEAU 3
+#define NB_POISSONS 5
+#define VITESSE_POISSON_MIN 1
+#define VITESSE_POISSON_MAX 3
+
+typedef struct {
+    int x, y;
+    int vitesse;
+    BITMAP* image;
+} Poisson;
+
+int aleatoire(int min, int max) {
+    return min + rand() % (max - min + 1);
+}
+
+int main() {
+    allegro_init();
+    install_keyboard();
+    set_color_depth(desktop_color_depth());
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
+    srand(time(NULL));
+
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+    BITMAP *decor = load_bitmap("biome2.bmp", NULL);
+    if (!decor) {
+        allegro_message("Erreur : impossible de charger 'biome2.bmp'");
+        return 1;
+    }
+
+    BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
+    if (!vaisseau_img) {
+        allegro_message("Erreur : impossible de charger 'sousmarin2.bmp'");
+        return 1;
+    }
+
+    // Chargement des poissons
+    Poisson poissons[NB_POISSONS];
+    for (int i = 0; i < NB_POISSONS; i++) {
+        char nom_fichier[20];
+        sprintf(nom_fichier, "poisson%d.bmp", (i % 3) + 1); // poisson1 à poisson3
+        poissons[i].image = load_bitmap(nom_fichier, NULL);
+        if (!poissons[i].image) {
+            allegro_message("Erreur : impossible de charger %s", nom_fichier);
+            return 1;
+        }
+
+        poissons[i].x = aleatoire(LARGEUR_ECRAN, LARGEUR_DECOR);
+        poissons[i].y = aleatoire(0, HAUTEUR_ECRAN - poissons[i].image->h);
+        poissons[i].vitesse = aleatoire(VITESSE_POISSON_MIN, VITESSE_POISSON_MAX);
+    }
+
+    int vaisseau_x = 100;
+    int vaisseau_y = HAUTEUR_ECRAN / 2;
+    int camera_x = 0;
+
+    while (!key[KEY_ESC]) {
+        // Scroll caméra
+        camera_x += VITESSE_SCROLL;
+        if (camera_x > (LARGEUR_DECOR - LARGEUR_ECRAN))
+            camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+
+        // Déplacement du vaisseau
+        if (key[KEY_RIGHT]) vaisseau_x += VITESSE_VAISSEAU;
+        if (key[KEY_LEFT])  vaisseau_x -= VITESSE_VAISSEAU;
+        if (key[KEY_UP])    vaisseau_y -= VITESSE_VAISSEAU;
+        if (key[KEY_DOWN])  vaisseau_y += VITESSE_VAISSEAU;
+
+        // Limites
+        if (vaisseau_x < 0) vaisseau_x = 0;
+        if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
+        if (vaisseau_y < 0) vaisseau_y = 0;
+        if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
+
+        // Déplacement des poissons
+        for (int i = 0; i < NB_POISSONS; i++) {
+            poissons[i].x -= poissons[i].vitesse;
+
+            if (poissons[i].x < camera_x - poissons[i].image->w) {
+                poissons[i].x = camera_x + LARGEUR_ECRAN + aleatoire(50, 300);
+                poissons[i].y = aleatoire(0, HAUTEUR_ECRAN - poissons[i].image->h);
+                poissons[i].vitesse = aleatoire(VITESSE_POISSON_MIN, VITESSE_POISSON_MAX);
+            }
+        }
+
+        // === DESSIN ===
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+        // Poissons
+        for (int i = 0; i < NB_POISSONS; i++) {
+            int aff_x = poissons[i].x - camera_x;
+            if (aff_x >= -poissons[i].image->w && aff_x <= LARGEUR_ECRAN) {
+                masked_blit(poissons[i].image, buffer, 0, 0, aff_x, poissons[i].y, poissons[i].image->w, poissons[i].image->h);
+            }
+        }
+
+        // Vaisseau
+        int vaisseau_aff_x = vaisseau_x - camera_x;
+        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+
+        // Affichage progression
+        int c = vaisseau_x * 100 / LARGEUR_DECOR;
+        textprintf_ex(buffer, font, 350, 50, makecol(0, 0, 0), -1, "Niveau 1 : %d %%", c);
+
+        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+        rest(20);
+    }
+
+    // Nettoyage
+    destroy_bitmap(buffer);
+    destroy_bitmap(decor);
+    destroy_bitmap(vaisseau_img);
+    for (int i = 0; i < NB_POISSONS; i++) {
+        destroy_bitmap(poissons[i].image);
+    }
+
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN();
