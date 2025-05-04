@@ -28,23 +28,21 @@ void dessiner_menu(int selection) {
 
     int base_y = SCREEN_H / 2 - 120;
 
-    textout_gros(screen, font, "--- MENU DU JEU ---", SCREEN_W / 2, base_y - 60, makecol(255, 255, 255));
-
     const char* options[] = {
         "1. Saisir pseudo",
-        "2. Nouvelle partie",
+        "2. nouvelle partie",
+        " Niveau 1",
+        " Niveau 2",
+        " Niveau 3",
         "3. Reprendre partie",
-        "4. Niveau 1",
-        "5. Niveau 2",
-        "6. Niveau 3",
-        "7. Raccourcis niveaux"
+        "4. Raccourcis niveaux"
     };
 
     for (int i = 0; i < 7; i++) {
         int color = (i == selection) ? makecol(255, 255, 0) : makecol(255, 255, 255);
 
         char affichage[50];
-        if ((i == 4 && niveau_debloque < 2) || (i == 5 && niveau_debloque < 3)) {
+        if ((i == 3 && niveau_debloque < 2) || (i == 4 && niveau_debloque < 3)) {
             sprintf(affichage, "%s 🔒", options[i]);
         } else {
             strcpy(affichage, options[i]);
@@ -89,7 +87,7 @@ int main() {
     set_color_depth(32);
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, 800, 600, 0, 0);
 
-    fond_menu = load_bitmap("fond_menu.bmp", NULL);
+    fond_menu = load_bitmap("backmenu.bmp", NULL);
     if (!fond_menu) {
         allegro_message("Erreur de chargement de l'image de fond !");
         return 1;
@@ -147,4 +145,3 @@ int main() {
     return 0;
 }
 END_OF_MAIN();
-
