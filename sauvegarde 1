@@ -1,0 +1,17 @@
+void sauvegarder_partie(const char* nom_fichier, int vaisseau_x, int vaisseau_y, int camera_x, int vies, time_t debut_temps, int en_pause) {
+    FILE* f = fopen(nom_fichier, "w");
+    if (!f) {
+        allegro_message("Erreur !");
+        return;
+    }
+
+    time_t temps_ecoule = time(NULL) - debut_temps;
+
+    fprintf(f, "%d %d\n", vaisseau_x, vaisseau_y);
+    fprintf(f, "%d\n", camera_x);
+    fprintf(f, "%d\n", vies);
+    fprintf(f, "%ld\n", temps_ecoule);
+    fprintf(f, "%d\n", en_pause);
+
+    fclose(f);
+    }
