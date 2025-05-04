@@ -1,9 +1,7 @@
 #include <allegro.h>
 #include <time.h>
 #include <stdlib.h>
-hdjjiodjksjqjsdkjqkjsdjqk  sdknqjd
-qksdqjsdk
-qsdnjqnsdjqjsd
+
 #define LARGEUR_ECRAN 800
 #define HAUTEUR_ECRAN 462
 #define LARGEUR_DECOR 2340
@@ -17,7 +15,6 @@ qsdnjqnsdjqjsd
 #define HAUTEUR_EXPLOSION 95
 #define NB_EXPLOSIONS_MAX 10
 
-// Structure explosion
 typedef struct {
     int actif;
     int x, y;
@@ -39,9 +36,8 @@ void creer_explosion(int x, int y) {
         }
     }
 }
-qsdqsdqsdqsd
-qsd
-// Structure ennemi
+
+f
 typedef struct {
     int actif;
     int x, y;
