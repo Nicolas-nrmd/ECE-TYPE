@@ -19,11 +19,12 @@ void textout_gros(BITMAP* bmp, FONT* f, const char* txt, int x, int y, int color
 }
 
 void dessiner_menu(int selection) {
+    // Efface l'écran avant chaque nouveau dessin
+    clear_to_color(screen, makecol(0, 0, 0));
+
     // Affichage de l'image de fond si chargée
     if (fond_menu)
         blit(fond_menu, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
-    else
-        clear_to_color(screen, makecol(0, 0, 0));
 
     int base_y = SCREEN_H / 2 - 120;
 
@@ -146,3 +147,4 @@ int main() {
     return 0;
 }
 END_OF_MAIN();
+
