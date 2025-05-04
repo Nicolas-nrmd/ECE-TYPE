@@ -1,0 +1,63 @@
+PoissonAmi poisson_ami = {0, 0, 0, NULL}; // Poisson ami qui suit le joueur
+
+// Timer pour le bouclier
+unsigned long temps_bouclier = 0;
+int bouclier_actif = 0;
+
+void activer_bouclier() {
+    bouclier_actif = 1;
+    temps_bouclier = time(NULL);
+}
+
+void deplacer_poisson_ami() {
+    if (poisson_ami.actif) {
+        poisson_ami.x = vaisseau_x;
+        poisson_ami.y = vaisseau_y;
+    }
+}
+
+// Fonction pour gérer la durée du bouclier et le poisson ami
+void gerer_bonus() {
+    // Gestion du bouclier (dure 5 secondes)
+    if (bouclier_actif && (time(NULL) - temps_bouclier) > DUREE_BOUCLIER / 1000) {
+        bouclier_actif = 0;
+        allegro_message("Bouclier expiré !");
+    }
+
+    // Gestion du poisson ami (dure 10 secondes)
+    if (poisson_ami.actif && (time(NULL) - poisson_ami.actif) > DUREE_POISSON_AMI / 1000) {
+        poisson_ami.actif = 0;
+        allegro_message("Poisson ami quitté !");
+    }
+}
+
+// Gestion des collisions avec les bonus
+void gestion_collision_bonus() {
+    for (int i = 0; i < NB_BONUS; i++) {
+        if (bonus[i].actif && vaisseau_x + vaisseau_img->w > bonus[i].x &&
+            vaisseau_x < bonus[i].x + bonus[i].image->w &&
+            vaisseau_y + vaisseau_img->h > bonus[i].y &&
+            vaisseau_y < bonus[i].y + bonus[i].image->h) {
+
+            bonus[i].actif = 0; // désactiver le bonus après collision
+
+            switch (bonus[i].type) {
+                case BONUS_VIE:
+                    vies++;
+                    allegro_message("Vie supplémentaire !");
+                    break;
+                case BONUS_BOUCLIER:
+                    activer_bouclier();
+                    allegro_message("Bouclier activé !");
+                    break;
+                case BONUS_AMI:
+                    poisson_ami.actif = 1;
+                    poisson_ami.x = vaisseau_x;
+                    poisson_ami.y = vaisseau_y;
+                    poisson_ami.sprite = load_bitmap("poisson_ami.bmp", NULL);
+                    allegro_message("Poisson ami rejoint !");
+                    break;
+            }
+        }
+    }
+}
