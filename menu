@@ -1,0 +1,117 @@
+#include <allegro.h>
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_PSEUDO 20
+
+char pseudo[MAX_PSEUDO] = "";
+int niveau_debloque = 1; // Niveau 1 débloqué par défaut
+
+void dessiner_menu(int selection) {
+    clear_to_color(screen, makecol(0, 0, 0));
+
+    textout_centre_ex(screen, font, "--- MENU DU JEU ---", SCREEN_W / 2, 50, makecol(255, 255, 255), -1);
+
+    const char* options[] = {
+        "1. Saisir pseudo",
+        "2. Nouvelle partie",
+        "3. Reprendre partie",
+        "4. Niveau 1",
+        "5. Niveau 2",
+        "6. Niveau 3",
+        "7. Raccourcis niveaux (prof)"
+    };
+
+    for (int i = 0; i < 7; i++) {
+        int color = (i == selection) ? makecol(255, 255, 0) : makecol(255, 255, 255);
+        textout_centre_ex(screen, font, options[i], SCREEN_W / 2, 100 + i * 30, color, -1);
+    }
+
+    if (strlen(pseudo) > 0) {
+        char msg[50];
+        sprintf(msg, "Pseudo actuel : %s", pseudo);
+        textout_centre_ex(screen, font, msg, SCREEN_W / 2, 330, makecol(0, 255, 0), -1);
+    }
+}
+
+void saisir_pseudo() {
+    clear_to_color(screen, makecol(0, 0, 0));
+    textout_centre_ex(screen, font, "Entrez votre pseudo (20 caracteres max):", SCREEN_W / 2, 100, makecol(255, 255, 255), -1);
+    char buffer[MAX_PSEUDO];
+    int index = 0;
+
+    while (!key[KEY_ENTER] && index < MAX_PSEUDO - 1) {
+        if (keypressed()) {
+            int k = readkey() & 0xff;
+            if (k >= 32 && k <= 126) {
+                buffer[index++] = k;
+                buffer[index] = '\0';
+            } else if (k == 8 && index > 0) {
+                buffer[--index] = '\0';
+            }
+            clear_to_color(screen, makecol(0, 0, 0));
+            textout_centre_ex(screen, font, "Entrez votre pseudo:", SCREEN_W / 2, 100, makecol(255, 255, 255), -1);
+            textout_centre_ex(screen, font, buffer, SCREEN_W / 2, 150, makecol(255, 255, 0), -1);
+        }
+    }
+    strcpy(pseudo, buffer);
+}
+
+int main() {
+    allegro_init();
+    install_keyboard();
+    set_color_depth(32);
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, 800, 600, 0, 0);
+
+    int choix = 0;
+
+    while (!key[KEY_ESC]) {
+        dessiner_menu(choix);
+
+        if (key[KEY_DOWN]) {
+            rest(150);
+            choix = (choix + 1) % 7;
+        }
+        if (key[KEY_UP]) {
+            rest(150);
+            choix = (choix - 1 + 7) % 7;
+        }
+        if (key[KEY_ENTER]) {
+            rest(200);
+            switch (choix) {
+                case 0:
+                    saisir_pseudo();
+                    break;
+                case 1:
+                    // Nouvelle partie: Reset progression, commencer au niveau 1
+                    niveau_debloque = 1;
+                    break;
+                case 2:
+                    // Reprendre partie: vérifier pseudo (ici, on simule qu'il est toujours reconnu)
+                    niveau_debloque = 2; // Simuler qu’on a débloqué niveau 2
+                    break;
+                case 3:
+                    // Niveau 1 (toujours accessible)
+                    break;
+                case 4:
+                    if (niveau_debloque >= 2) {
+                        // Accéder au niveau 2
+                    }
+                    break;
+                case 5:
+                    if (niveau_debloque >= 3) {
+                        // Accéder au niveau 3
+                    }
+                    break;
+                case 6:
+                    // Raccourcis pour tests
+                    break;
+            }
+        }
+        rest(30);
+    }
+
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN()
