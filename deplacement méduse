@@ -1,0 +1,183 @@
+#include <allegro.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define LARGEUR_ECRAN 800
+#define HAUTEUR_ECRAN 462
+#define LARGEUR_DECOR 2340
+#define HAUTEUR_DECOR 462
+#define VITESSE_SCROLL 2
+#define VITESSE_VAISSEAU 3
+#define NB_POISSONS 5
+#define VITESSE_POISSON_MIN 1
+#define VITESSE_POISSON_MAX 3
+
+#define NB_FRAMES_MEDUSE 4
+#define LARGEUR_FRAME_MEDUSE 64
+#define HAUTEUR_FRAME_MEDUSE 64
+
+typedef struct {
+    int x, y;
+    int vitesse;
+    BITMAP* image;
+} Poisson;
+
+int aleatoire(int min, int max) {
+    return min + rand() % (max - min + 1);
+}
+
+int main() {
+    allegro_init();
+    install_keyboard();
+    set_color_depth(desktop_color_depth());
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
+    srand(time(NULL));
+
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+    BITMAP *decor = load_bitmap("biome2.bmp", NULL);
+    if (!decor) {
+        allegro_message("Erreur : impossible de charger 'biome2.bmp'");
+        return 1;
+    }
+
+    BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
+    if (!vaisseau_img) {
+        allegro_message("Erreur : impossible de charger 'sousmarin2.bmp'");
+        return 1;
+    }
+
+    BITMAP *ennemi_img = load_bitmap("sousmarin_ennemi.bmp", NULL);
+    BITMAP *requin_img = load_bitmap("requin.bmp", NULL);
+    if (!ennemi_img || !requin_img) {
+        allegro_message("Erreur chargement sous-marin ennemi ou requin");
+        return 1;
+    }
+
+    // === MÉDUSE (sprite animé) ===
+    BITMAP *meduse_sheet = load_bitmap("meduse.bmp", NULL);
+    if (!meduse_sheet) {
+        allegro_message("Erreur : impossible de charger 'meduse.bmp'");
+        return 1;
+    }
+    int meduse_x = aleatoire(LARGEUR_ECRAN, LARGEUR_DECOR);
+    int meduse_y = aleatoire(0, HAUTEUR_ECRAN - HAUTEUR_FRAME_MEDUSE);
+    int meduse_vitesse = aleatoire(1, 2);
+    int meduse_frame = 0;
+    int meduse_compteur = 0;
+
+    // === POISSONS ===
+    Poisson poissons[NB_POISSONS];
+    for (int i = 0; i < NB_POISSONS; i++) {
+        char nom_fichier[20];
+        sprintf(nom_fichier, "poisson%d.bmp", (i % 3) + 1);
+        poissons[i].image = load_bitmap(nom_fichier, NULL);
+        if (!poissons[i].image) {
+            allegro_message("Erreur : impossible de charger %s", nom_fichier);
+            return 1;
+        }
+        poissons[i].x = aleatoire(LARGEUR_ECRAN, LARGEUR_DECOR);
+        poissons[i].y = aleatoire(0, HAUTEUR_ECRAN - poissons[i].image->h);
+        poissons[i].vitesse = aleatoire(VITESSE_POISSON_MIN, VITESSE_POISSON_MAX);
+    }
+
+    int vaisseau_x = 100;
+    int vaisseau_y = HAUTEUR_ECRAN / 2;
+    int camera_x = 0;
+
+    while (!key[KEY_ESC]) {
+        camera_x += VITESSE_SCROLL;
+        if (camera_x > (LARGEUR_DECOR - LARGEUR_ECRAN))
+            camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+
+        if (key[KEY_RIGHT]) vaisseau_x += VITESSE_VAISSEAU;
+        if (key[KEY_LEFT])  vaisseau_x -= VITESSE_VAISSEAU;
+        if (key[KEY_UP])    vaisseau_y -= VITESSE_VAISSEAU;
+        if (key[KEY_DOWN])  vaisseau_y += VITESSE_VAISSEAU;
+
+        if (vaisseau_x < 0) vaisseau_x = 0;
+        if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
+        if (vaisseau_y < 0) vaisseau_y = 0;
+        if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
+
+        // Poissons
+        for (int i = 0; i < NB_POISSONS; i++) {
+            poissons[i].x -= poissons[i].vitesse;
+            if (poissons[i].x < camera_x - poissons[i].image->w) {
+                poissons[i].x = camera_x + LARGEUR_ECRAN + aleatoire(50, 300);
+                poissons[i].y = aleatoire(0, HAUTEUR_ECRAN - poissons[i].image->h);
+                poissons[i].vitesse = aleatoire(VITESSE_POISSON_MIN, VITESSE_POISSON_MAX);
+            }
+        }
+
+        // Ennemi
+        static int ennemi_x = 1000, ennemi_y = 200, ennemi_vitesse = 2;
+        ennemi_x -= ennemi_vitesse;
+        if (ennemi_x < camera_x - ennemi_img->w) {
+            ennemi_x = camera_x + LARGEUR_ECRAN + aleatoire(100, 300);
+            ennemi_y = aleatoire(0, HAUTEUR_ECRAN - ennemi_img->h);
+        }
+
+        // Requin
+        static int requin_x = 1200, requin_y = 100, requin_vitesse = 4;
+        requin_x -= requin_vitesse;
+        if (requin_x < camera_x - requin_img->w) {
+            requin_x = camera_x + LARGEUR_ECRAN + aleatoire(150, 300);
+            requin_y = aleatoire(0, HAUTEUR_ECRAN - requin_img->h);
+        }
+
+        // Méduse
+        meduse_x -= meduse_vitesse;
+        if (meduse_x < camera_x - LARGEUR_FRAME_MEDUSE) {
+            meduse_x = camera_x + LARGEUR_ECRAN + aleatoire(200, 400);
+            meduse_y = aleatoire(0, HAUTEUR_ECRAN - HAUTEUR_FRAME_MEDUSE);
+        }
+
+        // Animation de la méduse
+        meduse_compteur++;
+        if (meduse_compteur >= 10) { // changer de frame toutes les 10 itérations
+            meduse_frame = (meduse_frame + 1) % NB_FRAMES_MEDUSE;
+            meduse_compteur = 0;
+        }
+
+        // === AFFICHAGE ===
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+        for (int i = 0; i < NB_POISSONS; i++) {
+            int aff_x = poissons[i].x - camera_x;
+            masked_blit(poissons[i].image, buffer, 0, 0, aff_x, poissons[i].y, poissons[i].image->w, poissons[i].image->h);
+        }
+
+        masked_blit(ennemi_img, buffer, 0, 0, ennemi_x - camera_x, ennemi_y, ennemi_img->w, ennemi_img->h);
+        masked_blit(requin_img, buffer, 0, 0, requin_x - camera_x, requin_y, requin_img->w, requin_img->h);
+
+        // Affichage de la frame actuelle de la méduse
+        blit(meduse_sheet, buffer,
+             meduse_frame * LARGEUR_FRAME_MEDUSE, 0,
+             meduse_x - camera_x, meduse_y,
+             LARGEUR_FRAME_MEDUSE, HAUTEUR_FRAME_MEDUSE);
+
+        int vaisseau_aff_x = vaisseau_x - camera_x;
+        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+
+        int c = vaisseau_x * 100 / LARGEUR_DECOR;
+        textprintf_ex(buffer, font, 350, 50, makecol(0, 0, 0), -1, "Niveau 1 : %d %%", c);
+
+        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        rest(20);
+    }
+
+    destroy_bitmap(buffer);
+    destroy_bitmap(decor);
+    destroy_bitmap(vaisseau_img);
+    destroy_bitmap(ennemi_img);
+    destroy_bitmap(requin_img);
+    destroy_bitmap(meduse_sheet);
+    for (int i = 0; i < NB_POISSONS; i++) {
+        destroy_bitmap(poissons[i].image);
+    }
+
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN();
