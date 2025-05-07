@@ -56,6 +56,7 @@ int main() {
         if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
         if (vaisseau_y < 0) vaisseau_y = 0;
         if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
+        if (vaisseau_x < camera_x) vaisseau_x = camera_x;
 
         // === DESSIN ===
         blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
