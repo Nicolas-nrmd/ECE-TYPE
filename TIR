@@ -1,0 +1,194 @@
+#include <allegro.h>
+#include <time.h>
+#include <stdlib.h>
+
+#define LARGEUR_ECRAN 800
+#define HAUTEUR_ECRAN 462
+#define LARGEUR_DECOR 2340
+#define HAUTEUR_DECOR 462
+#define VITESSE_SCROLL 2
+#define VITESSE_VAISSEAU 3
+#define NB_VIES 3
+
+#define MAX_TORPILLES 10
+#define VITESSE_TORPILLE 6
+#define COOLDOWN_TIR 10
+
+#define MAX_ENNEMIS 10
+#define VITESSE_ENNEMI 2
+#define FREQUENCE_APPARITION_ENNEMI 100
+
+typedef struct {
+    int x, y;
+    int active;
+} Torpille;
+
+typedef struct {
+    int x, y;
+    int active;
+} Ennemi;
+
+int collision(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2) {
+    return !(x2 > x1 + w1 ||
+             x2 + w2 < x1 ||
+             y2 > y1 + h1 ||
+             y2 + h2 < y1);
+}
+
+int main() {
+    allegro_init();
+    install_keyboard();
+    set_color_depth(desktop_color_depth());
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
+    srand(time(NULL));
+
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+    BITMAP *decor = load_bitmap("biome3.bmp", NULL);
+    BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
+    BITMAP *torpille_img = load_bitmap("torpille.bmp", NULL);
+    BITMAP *ennemi_img = load_bitmap("poissonennemi.bmp", NULL);
+
+    if (!decor || !vaisseau_img || !torpille_img || !ennemi_img) {
+        allegro_message("Erreur de chargement d'image.");
+        return 1;
+    }
+
+    int vaisseau_x = 100;
+    int vaisseau_y = HAUTEUR_ECRAN / 2;
+    int camera_x = 0;
+    int en_pause = 0;
+    time_t debut_temps = time(NULL);
+    int cooldown = 0;
+
+    Torpille torpilles[MAX_TORPILLES] = {0};
+    Ennemi ennemis[MAX_ENNEMIS] = {0};
+    int compteur_ennemi = 0;
+
+    while (!key[KEY_ESC]) {
+        if (key[KEY_P]) {
+            rest(200);
+            en_pause = !en_pause;
+        }
+
+        if (!en_pause) {
+            camera_x += VITESSE_SCROLL;
+            if (camera_x > LARGEUR_DECOR - LARGEUR_ECRAN)
+                camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+
+            if (key[KEY_RIGHT]) vaisseau_x += VITESSE_VAISSEAU;
+            if (key[KEY_LEFT])  vaisseau_x -= VITESSE_VAISSEAU;
+            if (key[KEY_UP])    vaisseau_y -= VITESSE_VAISSEAU;
+            if (key[KEY_DOWN])  vaisseau_y += VITESSE_VAISSEAU;
+
+            if (vaisseau_x < 0) vaisseau_x = 0;
+            if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
+            if (vaisseau_y < 0) vaisseau_y = 0;
+            if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
+
+            // Tir torpille
+            if (cooldown > 0) cooldown--;
+            if (key[KEY_T] && cooldown == 0) {
+                for (int i = 0; i < MAX_TORPILLES; i++) {
+                    if (!torpilles[i].active) {
+                        torpilles[i].x = vaisseau_x + vaisseau_img->w;
+                        torpilles[i].y = vaisseau_y + vaisseau_img->h / 2 - torpille_img->h / 2;
+                        torpilles[i].active = 1;
+                        cooldown = COOLDOWN_TIR;
+                        break;
+                    }
+                }
+            }
+
+            // Maj torpilles
+            for (int i = 0; i < MAX_TORPILLES; i++) {
+                if (torpilles[i].active) {
+                    torpilles[i].x += VITESSE_TORPILLE;
+                    if (torpilles[i].x > LARGEUR_DECOR)
+                        torpilles[i].active = 0;
+                }
+            }
+
+            // Apparition ennemis
+            compteur_ennemi++;
+            if (compteur_ennemi > FREQUENCE_APPARITION_ENNEMI) {
+                compteur_ennemi = 0;
+                for (int i = 0; i < MAX_ENNEMIS; i++) {
+                    if (!ennemis[i].active) {
+                        ennemis[i].x = camera_x + LARGEUR_ECRAN + rand() % 200;
+                        ennemis[i].y = rand() % (HAUTEUR_DECOR - ennemi_img->h);
+                        ennemis[i].active = 1;
+                        break;
+                    }
+                }
+            }
+
+            // Maj ennemis
+            for (int i = 0; i < MAX_ENNEMIS; i++) {
+                if (ennemis[i].active) {
+                    ennemis[i].x -= VITESSE_ENNEMI;
+                    if (ennemis[i].x < camera_x - ennemi_img->w)
+                        ennemis[i].active = 0;
+                }
+            }
+
+            // === COLLISIONS ===
+            for (int i = 0; i < MAX_TORPILLES; i++) {
+                if (!torpilles[i].active) continue;
+                for (int j = 0; j < MAX_ENNEMIS; j++) {
+                    if (!ennemis[j].active) continue;
+
+                    if (collision(torpilles[i].x, torpilles[i].y, torpille_img->w, torpille_img->h,
+                                  ennemis[j].x, ennemis[j].y, ennemi_img->w, ennemi_img->h)) {
+                        torpilles[i].active = 0;
+                        ennemis[j].active = 0;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // === AFFICHAGE ===
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+        int vx_aff = vaisseau_x - camera_x;
+        masked_blit(vaisseau_img, buffer, 0, 0, vx_aff, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+
+        for (int i = 0; i < MAX_TORPILLES; i++) {
+            if (torpilles[i].active) {
+                int tx = torpilles[i].x - camera_x;
+                if (tx >= 0 && tx < LARGEUR_ECRAN)
+                    masked_blit(torpille_img, buffer, 0, 0, tx, torpilles[i].y, torpille_img->w, torpille_img->h);
+            }
+        }
+
+        for (int i = 0; i < MAX_ENNEMIS; i++) {
+            if (ennemis[i].active) {
+                int ex = ennemis[i].x - camera_x;
+                if (ex >= 0 && ex < LARGEUR_ECRAN)
+                    masked_blit(ennemi_img, buffer, 0, 0, ex, ennemis[i].y, ennemi_img->w, ennemi_img->h);
+            }
+        }
+
+        int progression = vaisseau_x * 100 / LARGEUR_DECOR;
+        textprintf_ex(buffer, font, 350, 50, makecol(0, 0, 0), -1, "Niveau 1 : %d %%", progression);
+
+        int temps_ecoule = (int)(time(NULL) - debut_temps);
+        textprintf_ex(buffer, font, LARGEUR_ECRAN - 120, 10, makecol(255, 255, 255), -1, "Temps: %ds", temps_ecoule);
+
+        if (en_pause)
+            textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "== PAUSE ==");
+
+        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        rest(20);
+    }
+
+    destroy_bitmap(buffer);
+    destroy_bitmap(decor);
+    destroy_bitmap(vaisseau_img);
+    destroy_bitmap(torpille_img);
+    destroy_bitmap(ennemi_img);
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN();
