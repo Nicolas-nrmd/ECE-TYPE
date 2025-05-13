@@ -19,6 +19,7 @@
 #define NB_TIRS_MAX 20
 #define VITESSE_TIR 6
 
+
 typedef struct {
     int actif;
     int x, y;
@@ -55,6 +56,7 @@ typedef struct {
     int actif;
     int x, y;
     BITMAP *sprite;
+    int hp;
 } Ennemi;
 
 Ennemi ennemis[NB_ENNEMIS_MAX] = {0};
@@ -65,7 +67,17 @@ void spawn_ennemi(BITMAP *sprites[], int nb_sprites) {
             ennemis[i].actif = 1;
             ennemis[i].x = rand() % (LARGEUR_DECOR - 50) + LARGEUR_ECRAN;
             ennemis[i].y = rand() % (HAUTEUR_ECRAN - 50);
-            ennemis[i].sprite = sprites[rand() % nb_sprites];
+            int type = rand() % nb_sprites;
+            ennemis[i].sprite = sprites[type];
+
+            // Définir les HP en fonction du type
+            if (sprites[type] == sprites[0]) // requin
+                ennemis[i].hp = 2;
+            else if (sprites[type] == sprites[3]) // sous-marin ennemi
+                ennemis[i].hp = 3;
+            else
+                ennemis[i].hp = 1;
+
             break;
         }
     }
@@ -233,11 +245,16 @@ int main() {
                         tirs[i].y < ennemis[j].y + ennemis[j].sprite->h &&
                         tirs[i].y + tir_img->h > ennemis[j].y) {
 
-                        creer_explosion(ennemis[j].x, ennemis[j].y);
-                        ennemis[j].actif = 0;
-                        tirs[i].actif = 0;
-                        break;
+                        ennemis[j].hp--; // réduire les HP de l'ennemi
+                        tirs[i].actif = 0; // détruire le tir
+
+                        if (ennemis[j].hp <= 0) {
+                            creer_explosion(ennemis[j].x, ennemis[j].y);
+                            ennemis[j].actif = 0;
                         }
+
+                        break; // arrêt de la boucle de collisions
+    }
                 }
 
                 // Affichage et suppression hors écran
