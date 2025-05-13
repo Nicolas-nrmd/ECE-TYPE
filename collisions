@@ -2,13 +2,14 @@
 #include <time.h>
 
 #define LARGEUR_ECRAN 800
-#define HAUTEUR_ECRAN 580
-#define LARGEUR_DECOR 12521
-#define HAUTEUR_DECOR 588
+#define HAUTEUR_ECRAN 546
+#define LARGEUR_DECOR 8316
+#define HAUTEUR_DECOR 546
 #define VITESSE_SCROLL 2
 #define VITESSE_VAISSEAU 3
 #define NB_VIES 3
 #define MAX_TORPILLES 20
+#define DUREE_INVULNERABLE 1000  // en ms
 
 typedef struct {
     int x, y;
@@ -47,20 +48,21 @@ int est_position_valide(int x, int y, BITMAP *collision, BITMAP *vaisseau) {
 int main() {
     allegro_init();
     install_keyboard();
+    install_timer();
     set_color_depth(desktop_color_depth());
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
 
     BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
 
-    BITMAP *decor = load_bitmap("biome3.bmp", NULL);
+    BITMAP *decor = load_bitmap("biome1.bmp", NULL);
     if (!decor) {
-        allegro_message("Erreur : impossible de charger 'biome3.bmp'");
+        allegro_message("Erreur : impossible de charger 'biome1.bmp'");
         return 1;
     }
 
-    BITMAP *collision = load_bitmap("collision3.bmp", NULL);
+    BITMAP *collision = load_bitmap("collision1.bmp", NULL);
     if (!collision) {
-        allegro_message("Erreur : impossible de charger 'collision.bmp'");
+        allegro_message("Erreur : impossible de charger 'collision1.bmp'");
         return 1;
     }
 
@@ -76,12 +78,21 @@ int main() {
         return 1;
     }
 
+    BITMAP *coeur_img = load_bitmap("coeur.bmp", NULL);
+    if (!coeur_img) {
+        allegro_message("Erreur : impossible de charger 'coeur.bmp'");
+        return 1;
+    }
+
     int vaisseau_x = 100;
     int vaisseau_y = HAUTEUR_ECRAN / 2;
     int camera_x = 0;
     int vies = NB_VIES;
     int en_pause = 0;
     time_t debut_temps = time(NULL);
+
+    int invulnerable = 0;
+    int temps_derniere_collision = 0;
 
     for (int i = 0; i < MAX_TORPILLES; i++) {
         torpilles[i].actif = 0;
@@ -102,10 +113,24 @@ int main() {
             if (key[KEY_UP])    new_y -= VITESSE_VAISSEAU;
             if (key[KEY_DOWN])  new_y += VITESSE_VAISSEAU;
 
-            // Test de collision avec le décor
+            int maintenant = clock();
+
+            // Collision uniquement si pas invulnérable
             if (est_position_valide(new_x, new_y, collision, vaisseau_img)) {
                 vaisseau_x = new_x;
                 vaisseau_y = new_y;
+            } else if (!invulnerable) {
+                vies--;
+                temps_derniere_collision = clock();
+                invulnerable = 1;
+                if (vies <= 0) {
+                    allegro_message("Game Over !");
+                    break;
+                }
+            }
+
+            if (invulnerable && (clock() - temps_derniere_collision > DUREE_INVULNERABLE * CLOCKS_PER_SEC / 1000)) {
+                invulnerable = 0;
             }
 
             if (key[KEY_T]) {
@@ -117,7 +142,6 @@ int main() {
             if (camera_x > (LARGEUR_DECOR - LARGEUR_ECRAN))
                 camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
 
-            // MAJ des torpilles
             for (int i = 0; i < MAX_TORPILLES; i++) {
                 if (torpilles[i].actif) {
                     torpilles[i].x += 8;
@@ -130,9 +154,12 @@ int main() {
         // === AFFICHAGE ===
         blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
         int vaisseau_aff_x = vaisseau_x - camera_x;
-        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
 
-        // Afficher les torpilles
+        // Clignotement si invulnérable
+        if (!invulnerable || ((clock() / 100) % 2 == 0)) {
+            masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+        }
+
         for (int i = 0; i < MAX_TORPILLES; i++) {
             if (torpilles[i].actif) {
                 int tx = torpilles[i].x - camera_x;
@@ -142,11 +169,18 @@ int main() {
             }
         }
 
+        // Affichage du score
         int c = vaisseau_x * 100 / LARGEUR_DECOR;
         textprintf_ex(buffer, font, 350, 50, makecol(0, 0, 0), -1, "Niveau 1 : %d %%", c);
 
+        // Affichage du temps
         int temps_ecoule = (int)(time(NULL) - debut_temps);
         textprintf_ex(buffer, font, LARGEUR_ECRAN - 120, 10, makecol(255, 255, 255), -1, "Temps: %ds", temps_ecoule);
+
+        // Affichage des vies (cœurs)
+        for (int i = 0; i < vies; i++) {
+            masked_blit(coeur_img, buffer, 0, 0, 10 + i * (coeur_img->w + 5), 10, coeur_img->w, coeur_img->h);
+        }
 
         if (en_pause) {
             textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "== PAUSE ==");
@@ -156,12 +190,12 @@ int main() {
         rest(20);
     }
 
-    // === LIBÉRATION MÉMOIRE ===
     destroy_bitmap(buffer);
     destroy_bitmap(decor);
     destroy_bitmap(collision);
     destroy_bitmap(vaisseau_img);
     destroy_bitmap(torpille_img);
+    destroy_bitmap(coeur_img);
     allegro_exit();
     return 0;
 }
