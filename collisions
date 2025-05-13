@@ -1,65 +1,50 @@
 #include <allegro.h>
 #include <time.h>
-#include <stdlib.h>
 
 #define LARGEUR_ECRAN 800
-#define HAUTEUR_ECRAN 462
-#define LARGEUR_DECOR 2340
-#define HAUTEUR_DECOR 462
+#define HAUTEUR_ECRAN 580
+#define LARGEUR_DECOR 12521
+#define HAUTEUR_DECOR 588
 #define VITESSE_SCROLL 2
 #define VITESSE_VAISSEAU 3
 #define NB_VIES 3
-#define NB_ENNEMIS_MAX 10
-#define NB_FRAMES_EXPLOSION 8
-#define LARGEUR_EXPLOSION 95
-#define HAUTEUR_EXPLOSION 95
-#define NB_EXPLOSIONS_MAX 10
+#define MAX_TORPILLES 20
 
 typedef struct {
-    int actif;
     int x, y;
-    int frame;
-    int timer;
-} Explosion;
+    int actif;
+} Torpille;
 
-Explosion explosions[NB_EXPLOSIONS_MAX] = {0};
+Torpille torpilles[MAX_TORPILLES];
 
-void creer_explosion(int x, int y) {
-    for (int i = 0; i < NB_EXPLOSIONS_MAX; i++) {
-        if (!explosions[i].actif) {
-            explosions[i].actif = 1;
-            explosions[i].x = x;
-            explosions[i].y = y;
-            explosions[i].frame = 0;
-            explosions[i].timer = 0;
+void tirer_torpille(int x, int y) {
+    for (int i = 0; i < MAX_TORPILLES; i++) {
+        if (!torpilles[i].actif) {
+            torpilles[i].x = x;
+            torpilles[i].y = y;
+            torpilles[i].actif = 1;
             break;
         }
     }
 }
 
-f
-typedef struct {
-    int actif;
-    int x, y;
-    BITMAP *sprite;
-} Ennemi;
-
-Ennemi ennemis[NB_ENNEMIS_MAX] = {0};
-
-void spawn_ennemi(BITMAP *sprites[], int nb_sprites) {
-    for (int i = 0; i < NB_ENNEMIS_MAX; i++) {
-        if (!ennemis[i].actif) {
-            ennemis[i].actif = 1;
-            ennemis[i].x = rand() % (LARGEUR_DECOR - 50) + LARGEUR_ECRAN;
-            ennemis[i].y = rand() % (HAUTEUR_ECRAN - 50);
-            ennemis[i].sprite = sprites[rand() % nb_sprites];
-            break;
+int est_position_valide(int x, int y, BITMAP *collision, BITMAP *vaisseau) {
+    for (int i = 0; i < vaisseau->w; i++) {
+        for (int j = 0; j < vaisseau->h; j++) {
+            int px = x + i;
+            int py = y + j;
+            if (px >= 0 && px < collision->w && py >= 0 && py < collision->h) {
+                int couleur = getpixel(collision, px, py);
+                if (couleur == makecol(0, 0, 0)) {
+                    return 0; // Zone noire => collision
+                }
+            }
         }
     }
+    return 1; // Zone blanche => valide
 }
 
 int main() {
-    srand(time(NULL));
     allegro_init();
     install_keyboard();
     set_color_depth(desktop_color_depth());
@@ -67,9 +52,15 @@ int main() {
 
     BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
 
-    BITMAP *decor = load_bitmap("biome1.bmp", NULL);
+    BITMAP *decor = load_bitmap("biome3.bmp", NULL);
     if (!decor) {
-        allegro_message("Erreur : impossible de charger 'biome2.bmp'");
+        allegro_message("Erreur : impossible de charger 'biome3.bmp'");
+        return 1;
+    }
+
+    BITMAP *collision = load_bitmap("collision3.bmp", NULL);
+    if (!collision) {
+        allegro_message("Erreur : impossible de charger 'collision.bmp'");
         return 1;
     }
 
@@ -79,30 +70,10 @@ int main() {
         return 1;
     }
 
-    BITMAP *coeur = load_bitmap("coeur3.bmp", NULL);
-    if (!coeur) {
-        allegro_message("Erreur : impossible de charger 'coeur.bmp'");
+    BITMAP *torpille_img = load_bitmap("torpille.bmp", NULL);
+    if (!torpille_img) {
+        allegro_message("Erreur : impossible de charger 'torpille.bmp'");
         return 1;
-    }
-
-    BITMAP *explosion_spritesheet = load_bitmap("explosion_sheet.bmp", NULL);
-    if (!explosion_spritesheet) {
-        allegro_message("Erreur : impossible de charger 'explosion_sheet.bmp'");
-        return 1;
-    }
-
-    // Chargement des sprites ennemis
-    BITMAP *sprites_ennemis[4];
-    sprites_ennemis[0] = load_bitmap("ennemi1.bmp", NULL);
-    sprites_ennemis[1] = load_bitmap("ennemi2.bmp", NULL);
-    sprites_ennemis[2] = load_bitmap("ennemi3.bmp", NULL);
-    sprites_ennemis[3] = load_bitmap("ennemi4.bmp", NULL);
-
-    for (int i = 0; i < 4; i++) {
-        if (!sprites_ennemis[i]) {
-            allegro_message("Erreur : chargement ennemi %d échoué", i);
-            return 1;
-        }
     }
 
     int vaisseau_x = 100;
@@ -110,8 +81,11 @@ int main() {
     int camera_x = 0;
     int vies = NB_VIES;
     int en_pause = 0;
-
     time_t debut_temps = time(NULL);
+
+    for (int i = 0; i < MAX_TORPILLES; i++) {
+        torpilles[i].actif = 0;
+    }
 
     while (!key[KEY_ESC]) {
         if (key[KEY_P]) {
@@ -120,59 +94,50 @@ int main() {
         }
 
         if (!en_pause) {
+            int new_x = vaisseau_x;
+            int new_y = vaisseau_y;
+
+            if (key[KEY_RIGHT]) new_x += VITESSE_VAISSEAU;
+            if (key[KEY_LEFT])  new_x -= VITESSE_VAISSEAU;
+            if (key[KEY_UP])    new_y -= VITESSE_VAISSEAU;
+            if (key[KEY_DOWN])  new_y += VITESSE_VAISSEAU;
+
+            // Test de collision avec le décor
+            if (est_position_valide(new_x, new_y, collision, vaisseau_img)) {
+                vaisseau_x = new_x;
+                vaisseau_y = new_y;
+            }
+
+            if (key[KEY_T]) {
+                tirer_torpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
+                rest(100); // anti-spam
+            }
+
             camera_x += VITESSE_SCROLL;
             if (camera_x > (LARGEUR_DECOR - LARGEUR_ECRAN))
                 camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
 
-            if (key[KEY_RIGHT]) vaisseau_x += VITESSE_VAISSEAU;
-            if (key[KEY_LEFT])  vaisseau_x -= VITESSE_VAISSEAU;
-            if (key[KEY_UP])    vaisseau_y -= VITESSE_VAISSEAU;
-            if (key[KEY_DOWN])  vaisseau_y += VITESSE_VAISSEAU;
-
-            if (vaisseau_x < 0) vaisseau_x = 0;
-            if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
-            if (vaisseau_y < 0) vaisseau_y = 0;
-            if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
-
-            if (rand() % 100 < 2) spawn_ennemi(sprites_ennemis, 4);
-        }
-
-        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
-        int vaisseau_aff_x = vaisseau_x - camera_x;
-        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
-
-        for (int i = 0; i < NB_ENNEMIS_MAX; i++) {
-            if (ennemis[i].actif) {
-                int ex = ennemis[i].x - camera_x;
-                draw_sprite(buffer, ennemis[i].sprite, ex, ennemis[i].y);
-
-                if (!en_pause &&
-                    vaisseau_x < ennemis[i].x + ennemis[i].sprite->w &&
-                    vaisseau_x + vaisseau_img->w > ennemis[i].x &&
-                    vaisseau_y < ennemis[i].y + ennemis[i].sprite->h &&
-                    vaisseau_y + vaisseau_img->h > ennemis[i].y) {
-                    creer_explosion(ennemis[i].x, ennemis[i].y);
-                    ennemis[i].actif = 0;
-                    vies--;
+            // MAJ des torpilles
+            for (int i = 0; i < MAX_TORPILLES; i++) {
+                if (torpilles[i].actif) {
+                    torpilles[i].x += 8;
+                    if (torpilles[i].x > LARGEUR_DECOR)
+                        torpilles[i].actif = 0;
                 }
             }
         }
 
-        for (int i = 0; i < NB_EXPLOSIONS_MAX; i++) {
-            if (explosions[i].actif) {
-                if (++explosions[i].timer > 5) {
-                    explosions[i].frame++;
-                    explosions[i].timer = 0;
-                }
-                if (explosions[i].frame >= NB_FRAMES_EXPLOSION) {
-                    explosions[i].actif = 0;
-                } else {
-                    int fx = explosions[i].x - camera_x;
-                    int fy = explosions[i].y;
-                    masked_blit(explosion_spritesheet, buffer,
-                                explosions[i].frame * LARGEUR_EXPLOSION, 0,
-                                fx, fy,
-                                LARGEUR_EXPLOSION, HAUTEUR_EXPLOSION);
+        // === AFFICHAGE ===
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        int vaisseau_aff_x = vaisseau_x - camera_x;
+        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+
+        // Afficher les torpilles
+        for (int i = 0; i < MAX_TORPILLES; i++) {
+            if (torpilles[i].actif) {
+                int tx = torpilles[i].x - camera_x;
+                if (tx >= 0 && tx < LARGEUR_ECRAN) {
+                    masked_blit(torpille_img, buffer, 0, 0, tx, torpilles[i].y, torpille_img->w, torpille_img->h);
                 }
             }
         }
@@ -183,10 +148,6 @@ int main() {
         int temps_ecoule = (int)(time(NULL) - debut_temps);
         textprintf_ex(buffer, font, LARGEUR_ECRAN - 120, 10, makecol(255, 255, 255), -1, "Temps: %ds", temps_ecoule);
 
-        for (int i = 0; i < vies; i++) {
-            draw_sprite(buffer, coeur, 10 + i * (coeur->w + 5), 10);
-        }
-
         if (en_pause) {
             textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "== PAUSE ==");
         }
@@ -195,14 +156,13 @@ int main() {
         rest(20);
     }
 
-    allegro_exit();
+    // === LIBÉRATION MÉMOIRE ===
     destroy_bitmap(buffer);
     destroy_bitmap(decor);
+    destroy_bitmap(collision);
     destroy_bitmap(vaisseau_img);
-    destroy_bitmap(coeur);
-    destroy_bitmap(explosion_spritesheet);
-    for (int i = 0; i < 4; i++) destroy_bitmap(sprites_ennemis[i]);
+    destroy_bitmap(torpille_img);
+    allegro_exit();
     return 0;
 }
 END_OF_MAIN();
-
