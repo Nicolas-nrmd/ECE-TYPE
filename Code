@@ -113,7 +113,6 @@ int main() {
         allegro_message("Erreur : impossible de charger 'biome2.bmp'");
         return 1;
     }
-   // allegro_message("Taille du fond : largeur = %d px, hauteur = %d px", decor->w, decor->h);
 
 
     BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
@@ -186,7 +185,7 @@ int main() {
             if (key[KEY_DOWN])  vaisseau_y += VITESSE_VAISSEAU;
 
             static int tir_delay = 0;
-            if (key[KEY_T] && tir_delay <= 0) {
+            if (key[KEY_SPACE] && tir_delay <= 0) {
                 creer_tir(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2 - tir_img->h / 2);
                 tir_delay = 10;  // délai entre tirs
             }
