@@ -1,0 +1,412 @@
+#include <allegro.h>
+#include <time.h>
+#include <stdlib.h>
+
+
+#define LARGEUR_ECRAN 800
+#define HAUTEUR_ECRAN 588
+#define LARGEUR_DECOR 12521
+#define HAUTEUR_DECOR 588
+#define VITESSE_SCROLL 2
+#define VITESSE_VAISSEAU 3
+#define NB_VIES 3
+#define NB_ENNEMIS_MAX 10
+#define NB_FRAMES_EXPLOSION 6
+#define LARGEUR_EXPLOSION 127
+#define HAUTEUR_EXPLOSION 121
+#define NB_EXPLOSIONS_MAX 10
+
+#define NB_TIRS_MAX 20
+#define VITESSE_TIR 6
+
+typedef struct {
+    int actif;
+    int x, y;
+    int hp;
+    BITMAP *spritesheet;
+    int frame;
+    int frame_timer;
+    int largeur_frame;
+    int hauteur_frame;
+    int nb_frames;
+} Boss;
+
+typedef struct {
+    int actif;
+    int x, y;
+} Tir;
+
+Tir tirs[NB_TIRS_MAX] = {0};
+
+
+// Structure explosion
+typedef struct {
+    int actif;
+    int x, y;
+    int frame;
+    int timer;
+} Explosion;
+
+Explosion explosions[NB_EXPLOSIONS_MAX] = {0};
+
+void creer_explosion(int x, int y) {
+    for (int i = 0; i < NB_EXPLOSIONS_MAX; i++) {
+        if (!explosions[i].actif) {
+            explosions[i].actif = 1;
+            explosions[i].x = x;
+            explosions[i].y = y;
+            explosions[i].frame = 0;
+            explosions[i].timer = 0;
+            break;
+        }
+    }
+}
+
+// Structure ennemi
+typedef struct {
+    int actif;
+    int x, y;
+    BITMAP *sprite;
+    int hp;
+} Ennemi;
+
+Ennemi ennemis[NB_ENNEMIS_MAX] = {0};
+
+void spawn_ennemi(BITMAP *sprites[], int nb_sprites) {
+    for (int i = 0; i < NB_ENNEMIS_MAX; i++) {
+        if (!ennemis[i].actif) {
+            ennemis[i].actif = 1;
+            ennemis[i].x = rand() % (LARGEUR_DECOR - 50) + LARGEUR_ECRAN;
+            ennemis[i].y = rand() % (HAUTEUR_ECRAN - 50);
+            int type = rand() % nb_sprites;
+            ennemis[i].sprite = sprites[type];
+
+            // Définir les HP en fonction du type
+            if (sprites[type] == sprites[0]) // requin
+                ennemis[i].hp = 2;
+            else if (sprites[type] == sprites[3]) // sous-marin ennemi
+                ennemis[i].hp = 3;
+            else
+                ennemis[i].hp = 1;
+
+            break;
+        }
+    }
+}
+
+void creer_tir(int x, int y) {
+    for (int i = 0; i < NB_TIRS_MAX; i++) {
+        if (!tirs[i].actif) {
+            tirs[i].actif = 1;
+            tirs[i].x = x;
+            tirs[i].y = y;
+            break;
+        }
+    }
+}
+int collision_decor(BITMAP *mask, int x, int y, int w, int h) {
+    for (int i = 0; i < w; i++) {
+        for (int j = 0; j < h; j++) {
+            int pixel_x = x + i;
+            int pixel_y = y + j;
+
+            if (pixel_x >= 0 && pixel_x < mask->w && pixel_y >= 0 && pixel_y < mask->h) {
+                int color = getpixel(mask, pixel_x, pixel_y);
+                if (color == makecol(0, 0, 0)) {
+                    return 1; // collision détectée
+                }
+            }
+        }
+    }
+    return 0; // pas de collision
+}
+
+
+int main() {
+    srand(time(NULL));
+    allegro_init();
+    install_keyboard();
+    set_color_depth(desktop_color_depth());
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
+
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+
+    BITMAP *decor = load_bitmap("biome3.bmp", NULL);
+    if (!decor) {
+        allegro_message("Erreur : impossible de charger 'biome2.bmp'");
+        return 1;
+    }
+
+
+    BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
+    if (!vaisseau_img) {
+        allegro_message("Erreur : impossible de charger 'sousmarin2.bmp'");
+        return 1;
+    }
+
+    BITMAP *coeur = load_bitmap("coeur3.bmp", NULL);
+    if (!coeur) {
+        allegro_message("Erreur : impossible de charger 'coeur.bmp'");
+        return 1;
+    }
+
+    BITMAP *explosion_spritesheet = load_bitmap("explosion2.bmp", NULL);
+    if (!explosion_spritesheet) {
+        allegro_message("Erreur : impossible de charger 'explosion_sheet.bmp'");
+        return 1;
+    }
+
+    // Chargement des sprites ennemis
+    BITMAP *sprites_ennemis[4];
+    sprites_ennemis[0] = load_bitmap("requin.bmp", NULL);
+    sprites_ennemis[1] = load_bitmap("poisson.bmp", NULL);
+    sprites_ennemis[2] = load_bitmap("mine.bmp", NULL);
+    sprites_ennemis[3] = load_bitmap("sousmarinennemi.bmp", NULL);
+
+    BITMAP *tir_img = load_bitmap("tir.bmp", NULL);
+    if (!tir_img) {
+        allegro_message("Erreur : impossible de charger 'tir.bmp'");
+        return 1;
+    }
+    BITMAP *collision_mask = load_bitmap("collision3.bmp", NULL);
+    if (!collision_mask) {
+        allegro_message("Erreur : impossible de charger 'collision_mask.bmp'");
+        return 1;
+    }
+    BITMAP *boss_spritesheet = load_bitmap("boss_spritesheet.bmp", NULL);
+    if (!boss_spritesheet) {
+        allegro_message("Erreur : impossible de charger 'boss_spritesheet.bmp'");
+        return 1;
+    }
+
+    Boss boss = {0};
+    boss.actif = 0;
+    boss.hp = 20;
+    boss.spritesheet = boss_spritesheet;
+    boss.frame = 0;
+    boss.frame_timer = 0;
+    boss.largeur_frame = 64;
+    boss.hauteur_frame = 64;
+    boss.nb_frames = 4;
+
+
+
+    for (int i = 0; i < 4; i++) {
+        if (!sprites_ennemis[i]) {
+            allegro_message("Erreur : chargement ennemi %d échoué", i);
+            return 1;
+        }
+    }
+    int collision_cooldown = 0;
+    int vaisseau_x = 100;
+    int vaisseau_y = HAUTEUR_ECRAN / 2;
+    int camera_x = 0;
+    int vies = NB_VIES;
+    int en_pause = 0;
+
+    time_t debut_temps = time(NULL);
+
+    while (!key[KEY_ESC]) {
+        if (key[KEY_P]) {
+            rest(20);
+            en_pause = !en_pause;
+        }
+
+        if (!en_pause) {
+            camera_x += VITESSE_SCROLL;
+            if (camera_x > (LARGEUR_DECOR - LARGEUR_ECRAN))
+                camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+
+            if (key[KEY_RIGHT]) vaisseau_x += VITESSE_VAISSEAU;
+            if (key[KEY_LEFT])  vaisseau_x -= VITESSE_VAISSEAU;
+            if (key[KEY_UP])    vaisseau_y -= VITESSE_VAISSEAU;
+            if (key[KEY_DOWN])  vaisseau_y += VITESSE_VAISSEAU;
+
+            static int tir_delay = 0;
+            if (key[KEY_SPACE] && tir_delay <= 0) {
+                creer_tir(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2 - tir_img->h / 2);
+                tir_delay = 10;  // délai entre tirs
+            }
+            if (tir_delay > 0) tir_delay--;
+
+
+            if (vaisseau_x < 0) vaisseau_x = 0;
+            if (vaisseau_x > LARGEUR_DECOR - vaisseau_img->w) vaisseau_x = LARGEUR_DECOR - vaisseau_img->w;
+            if (vaisseau_y < 0) vaisseau_y = 0;
+            if (vaisseau_y > HAUTEUR_DECOR - vaisseau_img->h) vaisseau_y = HAUTEUR_DECOR - vaisseau_img->h;
+            if (vaisseau_x < camera_x) vaisseau_x = camera_x;
+
+            if (rand() % 100 < 15) spawn_ennemi(sprites_ennemis, 4);
+        }
+
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        int vaisseau_aff_x = vaisseau_x - camera_x;
+        masked_blit(vaisseau_img, buffer, 0, 0, vaisseau_aff_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+
+        for (int i = 0; i < NB_ENNEMIS_MAX; i++) {
+            if (ennemis[i].actif) {
+                int ex = ennemis[i].x - camera_x;
+                draw_sprite(buffer, ennemis[i].sprite, ex, ennemis[i].y);
+
+                if (!en_pause &&
+                    vaisseau_x < ennemis[i].x + ennemis[i].sprite->w &&
+                    vaisseau_x + vaisseau_img->w > ennemis[i].x &&
+                    vaisseau_y < ennemis[i].y + ennemis[i].sprite->h &&
+                    vaisseau_y + vaisseau_img->h > ennemis[i].y) {
+                    creer_explosion(ennemis[i].x, ennemis[i].y);
+                    ennemis[i].actif = 0;
+                    vies--;
+                }
+            }
+        }
+        for (int i = 0; i < NB_TIRS_MAX; i++) {
+            if (tirs[i].actif) {
+                tirs[i].x += VITESSE_TIR;
+
+                // Collision avec ennemis
+                for (int j = 0; j < NB_ENNEMIS_MAX; j++) {
+                    if (ennemis[j].actif &&
+                        tirs[i].x < ennemis[j].x + ennemis[j].sprite->w &&
+                        tirs[i].x + tir_img->w > ennemis[j].x &&
+                        tirs[i].y < ennemis[j].y + ennemis[j].sprite->h &&
+                        tirs[i].y + tir_img->h > ennemis[j].y) {
+
+                        ennemis[j].hp--; // réduire les HP de l'ennemi
+                        tirs[i].actif = 0; // détruire le tir
+
+                        if (ennemis[j].hp <= 0) {
+                            creer_explosion(ennemis[j].x, ennemis[j].y);
+                            ennemis[j].actif = 0;
+                        }
+
+                        break; // arrêt de la boucle de collisions
+    }
+                }
+
+                // Affichage et suppression hors écran
+                if (tirs[i].x - camera_x < LARGEUR_ECRAN) {
+                    draw_sprite(buffer, tir_img, tirs[i].x - camera_x, tirs[i].y);
+                } else {
+                    tirs[i].actif = 0;
+                }
+            }
+        }
+        int progression = vaisseau_x * 100 / LARGEUR_DECOR;
+        if (!boss.actif && progression >= 94) {
+            boss.actif = 1;
+            boss.x = vaisseau_x + 200; // 200 px devant le joueur
+            if (boss.x > LARGEUR_DECOR - boss.largeur_frame)
+                boss.x = LARGEUR_DECOR - boss.largeur_frame;
+            boss.y = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2;
+        }
+
+        if (boss.actif) {
+            // Animation
+            boss.frame_timer++;
+            if (boss.frame_timer >= 10) { // Changer de frame toutes les 10 itérations
+                boss.frame = (boss.frame + 1) % boss.nb_frames;
+                boss.frame_timer = 0;
+            }
+
+            int boss_aff_x = boss.x - camera_x;
+            masked_blit(boss.spritesheet, buffer,
+                        boss.frame * boss.largeur_frame, 0,
+                        boss_aff_x, boss.y,
+                        boss.largeur_frame, boss.hauteur_frame);
+
+            // Barre de vie
+            int bar_width = 50;
+            int bar_height = 5;
+            int bar_x = boss_aff_x + (boss.largeur_frame - bar_width) / 2;
+            int bar_y = boss.y - 10;
+            rectfill(buffer, bar_x, bar_y, bar_x + bar_width, bar_y + bar_height, makecol(255, 0, 0));
+            int hp_width = (boss.hp * bar_width) / 20;
+            rectfill(buffer, bar_x, bar_y, bar_x + hp_width, bar_y + bar_height, makecol(0, 255, 0));
+        }
+
+        for (int i = 0; i < NB_EXPLOSIONS_MAX; i++) {
+            if (explosions[i].actif) {
+                if (++explosions[i].timer > 5) {
+                    explosions[i].frame++;
+                    explosions[i].timer = 0;
+                }
+                if (explosions[i].frame >= NB_FRAMES_EXPLOSION) {
+                    explosions[i].actif = 0;
+                } else {
+                    int fx = explosions[i].x - camera_x;
+                    int fy = explosions[i].y + vaisseau_img->h / 2;
+                    // Remplacer masked_blit par draw_circle
+                    int rayon = 10 + explosions[i].frame * 5;
+                    circlefill(buffer, fx, fy, rayon, makecol(255, 100, 0));
+                }
+            }
+        }
+        for (int i = 0; i < NB_TIRS_MAX; i++) {
+            if (tirs[i].actif && boss.actif) {
+                if (tirs[i].x < boss.x + boss.largeur_frame &&
+                    tirs[i].x + tir_img->w > boss.x &&
+                    tirs[i].y < boss.y + boss.hauteur_frame &&
+                    tirs[i].y + tir_img->h > boss.y) {
+
+                    boss.hp--;
+                    tirs[i].actif = 0;
+
+                    if (boss.hp <= 0) {
+                        boss.actif = 0;
+                        creer_explosion(boss.x, boss.y);
+                    }
+                        // Afficher "GAME OVER" ou passer au niveau suivant
+                        textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2,
+                                             makecol(255, 0, 0), -1, "GAME OVER");
+                        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+                        rest(2000);
+                        break;
+                    }
+            }
+        }
+        if (!en_pause && collision_cooldown == 0 && collision_decor(collision_mask, vaisseau_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h)) {
+            creer_explosion(vaisseau_x, vaisseau_y);
+            vies--;
+            if (vies <= 0) {
+                textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "GAME OVER");
+                blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+                rest(2000);
+                break;
+            }
+            collision_cooldown = 50; // nombre de frames d'invincibilité (~1 seconde si 20 ms par frame)
+        }
+
+
+
+        int c = vaisseau_x * 100 / LARGEUR_DECOR;
+        textprintf_ex(buffer, font, 350, 50, makecol(0, 0, 0), -1, "Niveau 1 : %d %%", c);
+
+        int temps_ecoule = (int)(time(NULL) - debut_temps);
+        textprintf_ex(buffer, font, LARGEUR_ECRAN - 120, 10, makecol(255, 255, 255), -1, "Temps: %ds", temps_ecoule);
+
+        for (int i = 0; i < vies; i++) {
+            draw_sprite(buffer, coeur, 10 + i * (coeur->w + 5), 10);
+        }
+
+        if (en_pause) {
+            textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "== PAUSE ==");
+        }
+        if (collision_cooldown > 0) collision_cooldown--;
+
+        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        rest(20);
+    }
+
+    allegro_exit();
+    destroy_bitmap(collision_mask);
+    destroy_bitmap(tir_img);
+    destroy_bitmap(buffer);
+    destroy_bitmap(decor);
+    destroy_bitmap(vaisseau_img);
+    destroy_bitmap(coeur);
+    destroy_bitmap(explosion_spritesheet);
+    destroy_bitmap(boss_spritesheet);
+    for (int i = 0; i < 4; i++) destroy_bitmap(sprites_ennemis[i]);
+    return 0;
+}
+END_OF_MAIN();
