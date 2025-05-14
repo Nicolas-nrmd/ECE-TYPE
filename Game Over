@@ -1,0 +1,6 @@
+if (vies <= 0) {
+                textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "GAME OVER");
+                blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+                rest(2000);
+                break;
+            }
