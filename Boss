@@ -294,7 +294,7 @@ int main() {
         int progression = vaisseau_x * 100 / LARGEUR_DECOR;
         if (!boss.actif && progression >= 94) {
             boss.actif = 1;
-            boss.x = vaisseau_x + 200; // 200 px devant le joueur
+            boss.x = vaisseau_x + 500; // 200 px devant le joueur
             if (boss.x > LARGEUR_DECOR - boss.largeur_frame)
                 boss.x = LARGEUR_DECOR - boss.largeur_frame;
             boss.y = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2;
