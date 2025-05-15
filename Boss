@@ -186,7 +186,7 @@ int main() {
     boss.frame = 0;
     boss.frame_timer = 0;
     boss.largeur_frame = 64;
-    boss.hauteur_frame = 64;
+    boss.hauteur_frame = 350;
     boss.nb_frames = 4;
 
 
@@ -318,29 +318,12 @@ int main() {
         }
 
         if (boss.actif) {
-            // Animation
-            boss.frame_timer++;
-            if (boss.frame_timer >= 10) { // Changer de frame toutes les 10 itérations
-                boss.frame = (boss.frame + 1) % boss.nb_frames;
-                boss.frame_timer = 0;
-            }
+            int bar_width = 200;
+            int bar_height = 20;
+            int filled_width = (boss.hp * bar_width) / 20;
 
-            int boss_aff_x = boss.x - camera_x;
-            masked_blit(boss.spritesheet, buffer,
-                        boss.frame * boss.largeur_frame, 0,
-                        boss_aff_x, boss.y,
-                        boss.largeur_frame, boss.hauteur_frame);
-
-            // Barre de vie
-            int bar_width = boss.largeur_frame + 30;
-            int bar_height = 6;
-            int bar_x = boss_aff_x;
-            int bar_y = boss.y - 15;
-            rect(buffer, bar_x, bar_y, bar_x + bar_width, bar_y + bar_height, makecol(255, 0, 0));
-
-            // Remplissage en vert proportionnel aux HP
-            int largeur_hp = (boss.hp * bar_width) / 20; // 20 = HP max
-            rectfill(buffer, bar_x + 1, bar_y + 1, bar_x + largeur_hp - 1, bar_y + bar_height - 1, makecol(0, 255, 0));
+            rect(buffer, 300, 10, 300 + bar_width, 10 + bar_height, makecol(255, 255, 255));
+            rectfill(buffer, 300, 10, 300 + filled_width, 10 + bar_height, makecol(255, 0, 0));
         }
 
         for (int i = 0; i < NB_EXPLOSIONS_MAX; i++) {
