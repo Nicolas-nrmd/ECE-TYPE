@@ -1,7 +1,7 @@
 #include <allegro.h>
 #include <time.h>
 #include <stdlib.h>
-
+#include<math.h>
 
 #define LARGEUR_ECRAN 800
 #define HAUTEUR_ECRAN 588
@@ -22,6 +22,7 @@
 typedef struct {
     int actif;
     int x, y;
+    int y_init;
     int hp;
     BITMAP *spritesheet;
     int frame;
@@ -204,6 +205,7 @@ int main() {
     int vies = NB_VIES;
     int en_pause = 0;
     int victoire = 0;
+    static int oscillation_timer = 0;
 
     time_t debut_temps = time(NULL);
 
@@ -314,7 +316,8 @@ int main() {
             boss.x = vaisseau_x + 600; //
             if (boss.x > LARGEUR_DECOR - boss.largeur_frame)
                 boss.x = LARGEUR_DECOR - boss.largeur_frame;
-            boss.y = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2 - 10;
+            boss.y_init = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2 - 10;
+            boss.y = boss.y_init;
         }
 
         if (boss.actif) {
@@ -386,18 +389,19 @@ int main() {
             // idem, retour au menu, fin du programme, etc.
         }
         if (boss.actif) {
+            oscillation_timer++;
+            // amplitude maximale du déplacement vers le haut (en pixels)
+            int amplitude = 30;
+
+            // oscillation entre 0 (position initiale) et -amplitude (plus haut)
+            int offset = (int)(-amplitude * (sin(oscillation_timer * 0.10)));
+
+            // on veut que offset soit ≤ 0 (boss ne descend pas plus bas que y_init)
+            if (offset > 0) offset = 0;
+
+            boss.y = boss.y_init + offset;
             int boss_aff_x = boss.x - camera_x;
 
-            // Animation (facultatif)
-            boss.frame_timer++;
-            if (boss.frame_timer >= 10) { // Vitesse de changement d’image
-                boss.frame = (boss.frame + 1) % boss.nb_frames;
-                boss.frame_timer = 0;
-            }
-
-            // Calcul des coordonnées dans la spritesheet
-            int src_x = boss.frame * boss.largeur_frame;
-            int src_y = 0;
 
             masked_blit(boss.spritesheet, buffer,
             706, 581,            // source x, y (dans l'image)
