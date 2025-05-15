@@ -203,6 +203,7 @@ int main() {
     int camera_x = 0;
     int vies = NB_VIES;
     int en_pause = 0;
+    int victoire = 0;
 
     time_t debut_temps = time(NULL);
 
@@ -282,6 +283,22 @@ int main() {
                         break; // arrêt de la boucle de collisions
     }
                 }
+                if (boss.actif &&
+    tirs[i].x < boss.x + boss.largeur_frame &&
+    tirs[i].x + tir_img->w > boss.x &&
+    tirs[i].y < boss.y + boss.hauteur_frame &&
+    tirs[i].y + tir_img->h > boss.y) {
+
+                    boss.hp--;
+                    tirs[i].actif = 0;
+
+                    if (boss.hp <= 0) {
+                        boss.actif = 0;
+                        creer_explosion(boss.x, boss.y);
+                        victoire = 1; // ou autre comportement de victoire
+                    }
+    }
+
 
                 // Affichage et suppression hors écran
                 if (tirs[i].x - camera_x < LARGEUR_ECRAN) {
@@ -292,9 +309,9 @@ int main() {
             }
         }
         int progression = vaisseau_x * 100 / LARGEUR_DECOR;
-        if (!boss.actif && progression >= 94) {
+        if (!boss.actif && progression >= 93) {
             boss.actif = 1;
-            boss.x = vaisseau_x + 500; // 200 px devant le joueur
+            boss.x = vaisseau_x + 700; //
             if (boss.x > LARGEUR_DECOR - boss.largeur_frame)
                 boss.x = LARGEUR_DECOR - boss.largeur_frame;
             boss.y = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2;
@@ -341,29 +358,6 @@ int main() {
                 }
             }
         }
-        for (int i = 0; i < NB_TIRS_MAX; i++) {
-            if (tirs[i].actif && boss.actif) {
-                if (tirs[i].x < boss.x + boss.largeur_frame &&
-                    tirs[i].x + tir_img->w > boss.x &&
-                    tirs[i].y < boss.y + boss.hauteur_frame &&
-                    tirs[i].y + tir_img->h > boss.y) {
-
-                    boss.hp--;
-                    tirs[i].actif = 0;
-
-                    if (boss.hp <= 0) {
-                        boss.actif = 0;
-                        creer_explosion(boss.x, boss.y);
-                    }
-                        // Afficher "GAME OVER" ou passer au niveau suivant
-                        textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2,
-                                             makecol(255, 0, 0), -1, "GAME OVER");
-                        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
-                        rest(2000);
-                        break;
-                    }
-            }
-        }
         if (!en_pause && collision_cooldown == 0 && collision_decor(collision_mask, vaisseau_x, vaisseau_y, vaisseau_img->w, vaisseau_img->h)) {
             creer_explosion(vaisseau_x, vaisseau_y);
             vies--;
@@ -392,6 +386,20 @@ int main() {
             textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "== PAUSE ==");
         }
         if (collision_cooldown > 0) collision_cooldown--;
+
+        // Affichage de l'écran de fin si victoire ou game over
+        if (victoire) {
+            textout_centre_ex(buffer, font, "VICTOIRE !", LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(0, 255, 0), -1);
+            blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+            rest(2000);
+            // ici tu peux ajouter un return, ou mettre le jeu en pause, ou changer d’état
+        }
+        else if (vies <= 0) {
+            textout_centre_ex(buffer, font, "GAME OVER", LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1);
+            blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+            rest(2000);
+            // idem, retour au menu, fin du programme, etc.
+        }
 
         blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
         rest(20);
