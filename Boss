@@ -311,10 +311,10 @@ int main() {
         int progression = vaisseau_x * 100 / LARGEUR_DECOR;
         if (!boss.actif && progression >= 93) {
             boss.actif = 1;
-            boss.x = vaisseau_x + 700; //
+            boss.x = vaisseau_x + 600; //
             if (boss.x > LARGEUR_DECOR - boss.largeur_frame)
                 boss.x = LARGEUR_DECOR - boss.largeur_frame;
-            boss.y = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2;
+            boss.y = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2 - 10;
         }
 
         if (boss.actif) {
@@ -332,13 +332,15 @@ int main() {
                         boss.largeur_frame, boss.hauteur_frame);
 
             // Barre de vie
-            int bar_width = 50;
-            int bar_height = 5;
-            int bar_x = boss_aff_x + (boss.largeur_frame - bar_width) / 2;
-            int bar_y = boss.y - 10;
-            rectfill(buffer, bar_x, bar_y, bar_x + bar_width, bar_y + bar_height, makecol(255, 0, 0));
-            int hp_width = (boss.hp * bar_width) / 20;
-            rectfill(buffer, bar_x, bar_y, bar_x + hp_width, bar_y + bar_height, makecol(0, 255, 0));
+            int bar_width = boss.largeur_frame + 30;
+            int bar_height = 6;
+            int bar_x = boss_aff_x;
+            int bar_y = boss.y - 15;
+            rect(buffer, bar_x, bar_y, bar_x + bar_width, bar_y + bar_height, makecol(255, 0, 0));
+
+            // Remplissage en vert proportionnel aux HP
+            int largeur_hp = (boss.hp * bar_width) / 20; // 20 = HP max
+            rectfill(buffer, bar_x + 1, bar_y + 1, bar_x + largeur_hp - 1, bar_y + bar_height - 1, makecol(0, 255, 0));
         }
 
         for (int i = 0; i < NB_EXPLOSIONS_MAX; i++) {
@@ -399,6 +401,25 @@ int main() {
             blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
             rest(2000);
             // idem, retour au menu, fin du programme, etc.
+        }
+        if (boss.actif) {
+            int boss_aff_x = boss.x - camera_x;
+
+            // Animation (facultatif)
+            boss.frame_timer++;
+            if (boss.frame_timer >= 10) { // Vitesse de changement d’image
+                boss.frame = (boss.frame + 1) % boss.nb_frames;
+                boss.frame_timer = 0;
+            }
+
+            // Calcul des coordonnées dans la spritesheet
+            int src_x = boss.frame * boss.largeur_frame;
+            int src_y = 0;
+
+            masked_blit(boss.spritesheet, buffer,
+            706, 581,            // source x, y (dans l'image)
+            boss_aff_x, boss.y,  // destination x, y (à l'écran)
+            305, 294);           // largeur et hauteur à afficher
         }
 
         blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
