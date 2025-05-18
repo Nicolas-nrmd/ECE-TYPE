@@ -33,14 +33,14 @@ void ajouter_banc_poissons(int camera_x, BITMAP *collision) {
             do {
                 y = rand() % (HAUTEUR_DECOR - poisson_imgs[type]->h);
                 tentative++;
-            } while (!position_poisson_valide(x, y, poisson_imgs[type], collision) && tentative < 10);
+            } while (!positionPoissonValide(x, y, poisson_imgs[type], collision) && tentative < 10);
 
             if (tentative < 10) {
                 poissons[i].type = type;
                 poissons[i].x = x;
                 poissons[i].y = y;
                 poissons[i].actif = 1;
-                poissons[i].clignote = 0;
+                poissons[i].clignote=0;
                 poissons[i].temps_touche = 0;
                 poissons[i].direction_y = (rand() % 3) - 1;
                 poissons[i].delai_bulle = rand() % DELAI_BULLE;
@@ -56,7 +56,7 @@ void generer_bonus(int camera_x, BITMAP *collision, BITMAP *coeur_img) {
         bonus.x = camera_x + LARGEUR_ECRAN + rand() % 200;
         bonus.y = rand() % (HAUTEUR_DECOR - coeur_img->h);
         tentative++;
-    } while (!est_position_valide(bonus.x, bonus.y, collision, coeur_img) && tentative < 10);
+    } while (!positionValide(bonus.x, bonus.y, collision, coeur_img) && tentative < 10);
 
     if (tentative < 10) {
         bonus.actif = 1;
@@ -158,7 +158,7 @@ void jouer_niveau1(void) {
             if (new_x > camera_x + LARGEUR_ECRAN - vaisseau_img->w)
                 new_x = camera_x + LARGEUR_ECRAN - vaisseau_img->w;
 
-            if (est_position_valide(new_x, new_y, collision, vaisseau_img)) {
+            if (positionValide(new_x, new_y, collision, vaisseau_img)) {
                 vaisseau_x = new_x;
                 vaisseau_y = new_y;
             } else if (clock() - dernier_choc > 1000) {
@@ -211,7 +211,7 @@ void jouer_niveau1(void) {
                 if (poissons[i].actif) {
                     poissons[i].x -= 2;
                     poissons[i].y += poissons[i].direction_y;
-                    if (!position_poisson_valide(poissons[i].x, poissons[i].y, poisson_imgs[poissons[i].type], collision)) {
+                    if (!positionPoissonValide(poissons[i].x, poissons[i].y, poisson_imgs[poissons[i].type], collision)) {
                         poissons[i].direction_y *= -1;
                         poissons[i].y += poissons[i].direction_y * 2;
                     }
@@ -327,6 +327,13 @@ void jouer_niveau1(void) {
             if (camera_x > LARGEUR_DECOR - LARGEUR_ECRAN)
                 camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
         }
+        int progression = vaisseau_x * 100 / LARGEUR_DECOR;
+        if (progression >= 99) {
+            gestionVictoire(1);  // Appelle la fonction avec le niveau en cours
+            return; // Termine la fonction et revient au menu
+        }
+
+
 
         blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
         int vx_aff = vaisseau_x - camera_x;
