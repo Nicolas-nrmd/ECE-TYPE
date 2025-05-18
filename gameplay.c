@@ -51,15 +51,15 @@ void ajouter_banc_poissons(int camera_x, BITMAP *collision) {
 }
 
 void generer_bonus(int camera_x, BITMAP *collision, BITMAP *coeur_img) {
-    int tentative = 0;
+    int tentative = 0; // on va compter le nombre de tentative
     do {
-        bonus.x = camera_x + LARGEUR_ECRAN + rand() % 200;
-        bonus.y = rand() % (HAUTEUR_DECOR - coeur_img->h);
-        tentative++;
-    } while (!positionValide(bonus.x, bonus.y, collision, coeur_img) && tentative < 10);
+        bonus.x = camera_x + LARGEUR_ECRAN + rand() % 200; // on va positionner le bonus à droite de l'écran 
+        bonus.y = rand() % (HAUTEUR_DECOR - coeur_img->h); //la hauteur est aléatoire
+        tentative++; // 
+    } while (!positionValide(bonus.x, bonus.y, collision, coeur_img) && tentative < 10); // on vérifie maintenant si la position est bien dans le chemin ou le sous marin peut aller
 
     if (tentative < 10) {
-        bonus.actif = 1;
+        bonus.actif = 1; // on active le bonus
         bonus.pris = 0;
     }
 }
@@ -88,12 +88,12 @@ void ajouter_etoiles(int camera_x, BITMAP *collision) {
 }
 
 void tirer_bulle_etoile(int x, int y) {
-    for (int i = 0; i < MAX_BULLES_ETOILE; i++) {
-        if (!bulles_etoile[i].actif) {
-            bulles_etoile[i].x = x;
+    for (int i = 0; i < MAX_BULLES_ETOILE; i++) { // parcourt toute les bulles des étoiles
+        if (!bulles_etoile[i].actif) { // si une bulle est inactif 
+            bulles_etoile[i].x = x; // on lui donnne des coordonnées en hauteur et largeur
             bulles_etoile[i].y = y;
-            bulles_etoile[i].actif = 1;
-            break;
+            bulles_etoile[i].actif = 1; // on lui met le statue actif
+            break; // une fois après avoir activé une bulle on quitte le sous programme
         }
     }
 }
@@ -108,9 +108,9 @@ void jouer_niveau1(void) {
     set_color_depth(desktop_color_depth());
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
 
-    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN); // création du double buffer
     BITMAP *decor = load_bitmap("biome1.bmp", NULL);
-    BITMAP *collision = load_bitmap("collision1.bmp", NULL);
+    BITMAP *collision = load_bitmap("collision1.bmp", NULL);     // chargement de tt les images
     BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
     BITMAP *torpille_img = load_bitmap("torpille.bmp", NULL);
     coeur_img = load_bitmap("coeur.bmp", NULL);
@@ -124,7 +124,7 @@ void jouer_niveau1(void) {
 
 
 
-    for (int i = 0; i < NB_TYPES_POISSONS; i++) {
+    for (int i = 0; i < NB_TYPES_POISSONS; i++) { // charge les images de chaque poisson pour le niveau 1
         char nom[20];
         sprintf(nom, "poisson%d.bmp", i + 1);
         poisson_imgs[i] = load_bitmap(nom, NULL);
