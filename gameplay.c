@@ -154,6 +154,9 @@ void jouer_niveau1(void) {
             if (key[KEY_LEFT]) new_x -= VITESSE_VAISSEAU;
             if (key[KEY_UP]) new_y -= VITESSE_VAISSEAU;
             if (key[KEY_DOWN]) new_y += VITESSE_VAISSEAU;
+            if (new_x < camera_x) new_x = camera_x;
+            if (new_x > camera_x + LARGEUR_ECRAN - vaisseau_img->w)
+                new_x = camera_x + LARGEUR_ECRAN - vaisseau_img->w;
 
             if (est_position_valide(new_x, new_y, collision, vaisseau_img)) {
                 vaisseau_x = new_x;
