@@ -22,6 +22,21 @@
 
 #define MAX_PSEUDO 20
 #define FICHIER_SAUVEGARDE "sauvegardes.txt"
+#define MAX_ETOILES 10
+#define MAX_BULLES_ETOILE 20
+#define DELAI_TIR_ETOILE 100
+
+
+typedef struct {
+    int x, y;
+    int actif;
+    int delai_tir;
+} Etoile;
+
+typedef struct {
+    int x, y;
+    int actif;
+} BulleEtoile;
 
 typedef struct {
     int x, y;
@@ -49,10 +64,15 @@ typedef struct {
     int pris;
 } Bonus;
 
+
 Torpille torpilles[MAX_TORPILLES];
 Poisson poissons[MAX_POISSONS];
 Bulle bulles[MAX_BULLES];
 Bonus bonus;
+
+Etoile etoiles[MAX_ETOILES];
+BulleEtoile bulles_etoile[MAX_BULLES_ETOILE];
+BITMAP *etoile_img;
 
 BITMAP *poisson_imgs[NB_TYPES_POISSONS];
 BITMAP *coeur_img, *bulle_img;
@@ -74,5 +94,8 @@ void menu_niveaux();
 int menu();
 
 void jouer_niveau1(void);
+
+
+
 
 #endif //HEADER_H
