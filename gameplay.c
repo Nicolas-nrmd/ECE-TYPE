@@ -119,6 +119,8 @@ void jouer_niveau1(void) {
 
     for (int i = 0; i < MAX_ETOILES; i++) etoiles[i].actif = 0;
     for (int i = 0; i < MAX_BULLES_ETOILE; i++) bulles_etoile[i].actif = 0;
+    int vie_temporaire = 100; // Jauge à 100%
+    const int DEGAT_BULLE = 25; // Dégâts infligés par une bulle
 
 
 
@@ -181,9 +183,14 @@ void jouer_niveau1(void) {
                     if (!clignote_vaisseau &&
                         bulles[i].x > vaisseau_x && bulles[i].x < vaisseau_x + vaisseau_img->w &&
                         bulles[i].y > vaisseau_y && bulles[i].y < vaisseau_y + vaisseau_img->h) {
-                        vies--;
-                        clignote_vaisseau = 1;
-                        dernier_choc = clock();
+
+                        vie_temporaire -= DEGAT_BULLE;
+                        if (vie_temporaire <= 0) {
+                            vies--;
+                            vie_temporaire = 100;
+                            clignote_vaisseau = 1;
+                            dernier_choc = clock();
+                        }
                         bulles[i].actif = 0;
                     }
                 }
@@ -233,7 +240,7 @@ void jouer_niveau1(void) {
                         vies--;
                         clignote_vaisseau = 1;
                         dernier_choc = clock();
-                    }
+                        }
                 }
             }
 
@@ -281,15 +288,19 @@ void jouer_niveau1(void) {
                     if (!clignote_vaisseau &&
                         bulles_etoile[i].x > vaisseau_x && bulles_etoile[i].x < vaisseau_x + vaisseau_img->w &&
                         bulles_etoile[i].y > vaisseau_y && bulles_etoile[i].y < vaisseau_y + vaisseau_img->h) {
-                        vies--;
-                        clignote_vaisseau = 1;
-                        dernier_choc = clock();
+
+                        vie_temporaire -= DEGAT_BULLE;
+                        if (vie_temporaire <= 0) {
+                            vies--;
+                            vie_temporaire = 100;
+                            clignote_vaisseau = 1;
+                            dernier_choc = clock();
+                        }
                         bulles_etoile[i].actif = 0;
                         }
+
                 }
             }
-
-
 
             int progression = vaisseau_x * 100 / LARGEUR_DECOR;
             if (progression >= prochain_palier && !bonus.actif) {
@@ -352,6 +363,15 @@ void jouer_niveau1(void) {
 
         for (int i = 0; i < vies; i++)
             masked_blit(coeur_img, buffer, 0, 0, 10 + i * 35, 10, coeur_img->w, coeur_img->h);
+        // Affichage de la jauge de vie
+        int largeur_jauge_max = 100;
+        int hauteur_jauge = 10;
+        int x_jauge = 10;
+        int y_jauge = 10 + coeur_img->h + 5;
+        int largeur_jauge = largeur_jauge_max * vie_temporaire / 100;
+
+        rectfill(buffer, x_jauge, y_jauge, x_jauge + largeur_jauge, y_jauge + hauteur_jauge, makecol(255, 0, 0));
+        rect(buffer, x_jauge, y_jauge, x_jauge + largeur_jauge_max, y_jauge + hauteur_jauge, makecol(255, 255, 255));
 
         int c = vaisseau_x * 100 / LARGEUR_DECOR;
         int temps_ecoule = (int)(time(NULL) - debut_temps);
