@@ -109,8 +109,8 @@ void jouer_niveau3(void) {
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
 
     BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
-    BITMAP *decor = load_bitmap("biome1.bmp", NULL);
-    BITMAP *collision = load_bitmap("collision1.bmp", NULL);
+    BITMAP *decor = load_bitmap("biome3.bmp", NULL);
+    BITMAP *collision = load_bitmap("collision3.bmp", NULL);
     BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
     BITMAP *torpille_img = load_bitmap("torpille.bmp", NULL);
     coeur_img = load_bitmap("coeur.bmp", NULL);
