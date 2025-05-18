@@ -166,10 +166,12 @@ void jouer_niveau1(void) {
                 clignote_vaisseau = 1;
                 dernier_choc = clock();
             }
-
+            static int tir_delay = 0;
             if (key[KEY_SPACE]) {
                 tirer_torpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
+                tir_delay = 10;  // délai entre tirs
             }
+            if (tir_delay > 0) tir_delay--;
 
             for (int i = 0; i < MAX_TORPILLES; i++) {
                 if (torpilles[i].actif) {
