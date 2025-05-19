@@ -1,0 +1,84 @@
+#ifndef HEADER_H
+#define HEADER_H
+
+#include <allegro.h>
+#include <time.h>
+#include <stdio.h>
+#include <math.h>
+
+#define LARGEUR_ECRAN 800
+#define HAUTEUR_ECRAN 546
+#define LARGEUR_DECOR 8316
+#define HAUTEUR_DECOR 546
+#define VITESSE_SCROLL 2
+#define VITESSE_VAISSEAU 3
+#define NB_VIES 3
+#define MAX_TORPILLES 100
+#define MAX_POISSONS 50
+#define NB_TYPES_POISSONS 4
+#define MAX_BULLES 100
+#define TEMPS_CLIGNOTE 100
+#define DELAI_BULLE 100
+#define DELAI_BULLE_BOSS 60
+#define BOSS_FRAME_COUNT 5
+#define BOSS_FRAME_WIDTH 187
+#define BOSS_FRAME_HEIGHT 159
+#define MAX_MINES 10
+#define MAX_FEU 50
+#define MAX_TIR 50
+
+typedef struct {
+    int actif;
+    float x, y;
+    float dx, dy;
+} Tir;
+
+Tir tirs[MAX_TIR];
+
+typedef struct {
+    int actif;
+    float x, y;
+    float dx, dy;
+} Feu;
+
+Feu feus[MAX_FEU];
+
+typedef struct {
+    int actif;
+    int x, y;
+    int y_init;
+    int hp;
+    BITMAP *spritesheet;
+    int frame;
+    int frame_timer;
+    int largeur_frame;
+    int hauteur_frame;
+    int nb_frames;
+} Boss;
+
+typedef struct {
+    int x, y;
+    int actif;
+} Mine;
+
+typedef struct {
+    int x, y;
+    int actif;
+} Torpille;
+
+typedef struct {
+    int x, y;
+    int type;
+    int actif;
+    int clignote;
+    int temps_touche;
+    int direction_y;
+    int delai_bulle;
+} Poisson;
+
+typedef struct {
+    int x, y;
+    int actif;
+} Bulle;
+
+#endif //HEADER_H
