@@ -173,6 +173,14 @@ void jouer_niveau2(void) {
                     if (torpilles[i].x > LARGEUR_DECOR) torpilles[i].actif = 0;
                 }
             }
+           if (key[KEY_H]) { // Appuie sur H pour aller à 50% du niveau
+                vaisseau_x = 6000;             // Position du joueur à 50% du niveau
+                camera_x = vaisseau_x - LARGEUR_ECRAN / 2; // Centrer la caméra autour du joueur
+                if (camera_x < 0) camera_x = 0; // Limite gauche
+                if (camera_x > LARGEUR_DECOR - LARGEUR_ECRAN)  // Limite droite
+                    camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+                rest(200); // Anti-rebond : petite pause pour éviter répétition si la touche reste enfoncée
+            }
 
             for (int i = 0; i < MAX_BULLES; i++) {
                 if (bulles[i].actif) {
