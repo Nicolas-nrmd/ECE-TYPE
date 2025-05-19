@@ -23,13 +23,15 @@
 
 #define MAX_PSEUDO 20
 #define FICHIER_SAUVEGARDE "sauvegardes.txt"
-#define MAX_ETOILES 10
+#define MAX_ETOILES 15
 #define MAX_BULLES_ETOILE 20
 #define DELAI_TIR_ETOILE 100
+#define MAX_EPINES_ETOILE 60
 
-#define MAX_REQUINS 10
+#define MAX_REQUINS 13
 #define DELAI_TIR_REQUIN 100
 #define DEGAT_REQUIN 50
+#define DEGAT_DENT 50
 
 #define DELAI_BULLE_BOSS 60
 #define BOSS_FRAME_COUNT 5
@@ -50,6 +52,7 @@ typedef struct {
 typedef struct {
     int x, y;
     int actif;
+    int speciale;
 } Torpille;
 
 typedef struct {
@@ -120,12 +123,6 @@ Dent dents[MAX_DENTS];
 Requin requins[MAX_REQUINS];
 BITMAP *requin_img;
 
-extern BouclierBonus boucliers[3];
-extern BITMAP *bouclier_img;
-extern int bouclier_actif;
-
-
-
 Torpille torpilles[MAX_TORPILLES];
 Poisson poissons[MAX_POISSONS];
 Bulle bulles[MAX_BULLES];
@@ -158,16 +155,19 @@ void tirer_bulle_etoile(int x, int y);
 void jouer_niveau1(void);
 void gestionVictoire(int niveau_actuel);
 
-void ajouter_requin(int camera_x, int y_min, int y_max);
+void ajouter_requin(int camera_x, int y_min, int y_max, BITMAP *collision);
 void jouer_niveau2(void);
 void ajouterPoisson(int camera_x, BITMAP *collision);
+int positionRequinValide(int x, int y, BITMAP *img, BITMAP *collision);
 
-
+void tireDent(int x, int y);
 void jouer_niveau3(void);
 
-#define MAX_EPINES_ETOILE 50
 extern epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
 
 void tirer_epine_etoile(int x, int y);
 epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
+
+
+
 #endif //HEADER_H
