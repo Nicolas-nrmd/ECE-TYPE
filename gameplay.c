@@ -1,99 +1,99 @@
 #include "header.h"
 
-void tirer_torpille(int x, int y) {
-    for (int i = 0; i < MAX_TORPILLES; i++) {  // Parcourt toutes les torpilles disponibles
-        if (!torpilles[i].actif) {   // Si la torpille n'est pas active (disponible)
-            torpilles[i].x = x;     // Initialise sa position en x
-            torpilles[i].y = y;     // Initialise sa position en y
-            torpilles[i].actif = 1;  // Active la torpille (elle sera affichée et se déplacera)
-            break;                    // Sort de la boucle après avoir activé une torpille
+void tireTorpille(int x, int y) {
+    for (int i = 0; i < MAX_TORPILLES; i++) {
+        if (!torpilles[i].actif) {
+            torpilles[i].x = x;
+            torpilles[i].y = y;
+            torpilles[i].actif = 1;
+            break;
         }
     }
 }
 
-void tirer_bulle(int x, int y) {
-    for (int i = 0; i < MAX_BULLES; i++) {  // Parcourt toutes les bulles disponibles
-        if (!bulles[i].actif) {   // Si la bulle n'est pas active (disponible)
-            bulles[i].x = x;      // Initialise sa position en x
-            bulles[i].y = y;     // Initialise sa position en y
-            bulles[i].actif = 1;  // Active la bulle (elle sera affichée et se déplacera)
-            break;               // Sort de la boucle après avoir activé une bulle
+void tireBulle(int x, int y) {
+    for (int i = 0; i < MAX_BULLES; i++) {
+        if (!bulles[i].actif) {
+            bulles[i].x = x;
+            bulles[i].y = y;
+            bulles[i].actif = 1;
+            break;
         }
     }
 }
 
-void ajouter_banc_poissons(int camera_x, BITMAP *collision) {
-    int type = rand() % NB_TYPES_POISSONS;   // Choisit un type de poisson aléatoire
-    int taille_banc = 3 + rand() % 2;         // donne la taille du banc
-    for (int i = 0; i < MAX_POISSONS && taille_banc > 0; i++) { // boucle qui parcour tout les poissons
-        if (!poissons[i].actif) { // si le poisson n'est pas actif
-            int x = camera_x + LARGEUR_ECRAN + rand() % 200; // on positionne le poisson hors écran à droite
-            int y; 
-            int tentative = 0; // mise à 0 d'une variable tentative
+void Banc_Poisson(int camera_x, BITMAP *collision) {
+    int type = rand() % NB_TYPES_POISSONS;
+    int taille_banc = 3 + rand() % 2;
+    for (int i = 0; i < MAX_POISSONS && taille_banc > 0; i++) {
+        if (!poissons[i].actif) {
+            int x = camera_x + LARGEUR_ECRAN + rand() % 200;
+            int y;
+            int tentative = 0;
             do {
-                y = rand() % (HAUTEUR_DECOR - poisson_imgs[type]->h); // choisit une position y aléatoire
-                tentative++; // compte les tentatives
-            } while (!positionPoissonValide(x, y, poisson_imgs[type], collision) && tentative < 10);// on vérifie si la position est valide, sinon réessaie (max 10 fois)
+                y = rand() % (HAUTEUR_DECOR - poisson_imgs[type]->h);
+                tentative++;
+            } while (!positionPoissonValide(x, y, poisson_imgs[type], collision) && tentative < 10);
 
-            if (tentative < 10) { // quand un emplacement a été trouvé
-                poissons[i].type = type; // on choisit le type du poisson
-                poissons[i].x = x; // on le posisionne en x
-                poissons[i].y = y; // on le positionne en y
-                poissons[i].actif = 1; // on active le poisson
-                poissons[i].clignote=0; // on désactive le clignottement
-                poissons[i].temps_touche = 0; // 
-                poissons[i].direction_y = (rand() % 3) - 1; // Attribue une direction verticale aléatoire (-1, 0, ou 1)
-                poissons[i].delai_bulle = rand() % DELAI_BULLE;  // cela détermine dans combien de temps il va tirer une bulle
-                taille_banc--; // on enlève donc un poisson dans le banc à placer
+            if (tentative < 10) {
+                poissons[i].type = type;
+                poissons[i].x = x;
+                poissons[i].y = y;
+                poissons[i].actif = 1;
+                poissons[i].clignote=0;
+                poissons[i].temps_touche = 0;
+                poissons[i].direction_y = (rand() % 3) - 1;
+                poissons[i].delai_bulle = rand() % DELAI_BULLE;
+                taille_banc--;
             }
         }
     }
 }
 
-void generer_bonus(int camera_x, BITMAP *collision, BITMAP *coeur_img) {
-    int tentative = 0; // on va compter le nombre de tentative
+void BonusLife(int camera_x, BITMAP *collision, BITMAP *coeur_img) {
+    int tentative = 0;
     do {
-        bonus.x = camera_x + LARGEUR_ECRAN + rand() % 200; // on va positionner le bonus à droite de l'écran 
-        bonus.y = rand() % (HAUTEUR_DECOR - coeur_img->h); //la hauteur est aléatoire
-        tentative++; // 
-    } while (!positionValide(bonus.x, bonus.y, collision, coeur_img) && tentative < 10); // on vérifie maintenant si la position est bien dans le chemin ou le sous marin peut aller
+        bonus.x = camera_x + LARGEUR_ECRAN + rand() % 200;
+        bonus.y = rand() % (HAUTEUR_DECOR - coeur_img->h);
+        tentative++;
+    } while (!positionValide(bonus.x, bonus.y, collision, coeur_img) && tentative < 10);
 
     if (tentative < 10) {
-        bonus.actif = 1; // on active le bonus
+        bonus.actif = 1;
         bonus.pris = 0;
     }
 }
 
 void ajouter_etoiles(int camera_x, BITMAP *collision) {
-    for (int i = 0; i < MAX_ETOILES; i++) { // pour chaque étoile
-        if (!etoiles[i].actif) { // si l'étoile est inactive 
-            int x = camera_x + LARGEUR_ECRAN + rand() % 200; // positionne dans la zone visible
+    for (int i = 0; i < MAX_ETOILES; i++) {
+        if (!etoiles[i].actif) {
+            int x = camera_x + LARGEUR_ECRAN + rand() % 200;
             int y = 0;
 
             for (int yy = 0; yy < HAUTEUR_DECOR - etoile_img->h; yy++) {
-                int color = getpixel(collision, x, yy + etoile_img->h); // On obtient la couleur du pixel où est posé l'étoile
+                int color = getpixel(collision, x, yy + etoile_img->h);
                 if (getr(color) == 0 && getg(color) == 0 && getb(color) == 0) { // zone noire
                     y = yy;
                     break;
                 }
             }
 
-            etoiles[i].x = x; // donne la position à l'étoile
-            etoiles[i].y = y; // donne la position à l'étoile
-            etoiles[i].actif = 1; // active l'étoile 
-            etoiles[i].delai_tir = rand() % DELAI_TIR_ETOILE; // donne les délais des tirs de l'étoile
+            etoiles[i].x = x;
+            etoiles[i].y = y;
+            etoiles[i].actif = 1;
+            etoiles[i].delai_tir = rand() % DELAI_TIR_ETOILE;
             break;
         }
     }
 }
 
 void tirer_bulle_etoile(int x, int y) {
-    for (int i = 0; i < MAX_BULLES_ETOILE; i++) { // parcourt toute les bulles des étoiles
-        if (!bulles_etoile[i].actif) { // si une bulle est inactif 
-            bulles_etoile[i].x = x; // on lui donnne des coordonnées en hauteur et largeur
+    for (int i = 0; i < MAX_BULLES_ETOILE; i++) {
+        if (!bulles_etoile[i].actif) {
+            bulles_etoile[i].x = x;
             bulles_etoile[i].y = y;
-            bulles_etoile[i].actif = 1; // on lui met le statue actif
-            break; // une fois après avoir activé une bulle on quitte le sous programme
+            bulles_etoile[i].actif = 1;
+            break;
         }
     }
 }
@@ -101,16 +101,16 @@ void tirer_bulle_etoile(int x, int y) {
 
 
 
-void jouer_niveau1(void) {
+void jouer_niveau1(int progression_forcee) {
     srand(time(NULL));
 
     install_keyboard();
     set_color_depth(desktop_color_depth());
     set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
 
-    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN); // création du double buffer
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
     BITMAP *decor = load_bitmap("biome1.bmp", NULL);
-    BITMAP *collision = load_bitmap("collision1.bmp", NULL);     // chargement de tt les images
+    BITMAP *collision = load_bitmap("collision1.bmp", NULL);
     BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
     BITMAP *torpille_img = load_bitmap("torpille.bmp", NULL);
     coeur_img = load_bitmap("coeur.bmp", NULL);
@@ -124,7 +124,7 @@ void jouer_niveau1(void) {
 
 
 
-    for (int i = 0; i < NB_TYPES_POISSONS; i++) { // charge les images de chaque poisson pour le niveau 1
+    for (int i = 0; i < NB_TYPES_POISSONS; i++) {
         char nom[20];
         sprintf(nom, "poisson%d.bmp", i + 1);
         poisson_imgs[i] = load_bitmap(nom, NULL);
@@ -168,7 +168,7 @@ void jouer_niveau1(void) {
             }
             static int tir_delay = 0;
             if (key[KEY_SPACE]) {
-                tirer_torpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
+                tireTorpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
                 tir_delay = 10;  // délai entre tirs
             }
             if (tir_delay > 0) tir_delay--;
@@ -203,7 +203,7 @@ void jouer_niveau1(void) {
 
             compteur_poisson++;
             if (compteur_poisson > 150) {
-                ajouter_banc_poissons(camera_x, collision);
+                Banc_Poisson(camera_x, collision);
                 compteur_poisson = 0;
             }
 
@@ -218,7 +218,7 @@ void jouer_niveau1(void) {
 
                     poissons[i].delai_bulle--;
                     if (poissons[i].delai_bulle <= 0) {
-                        tirer_bulle(poissons[i].x, poissons[i].y + poisson_imgs[poissons[i].type]->h / 2);
+                        tireBulle(poissons[i].x, poissons[i].y + poisson_imgs[poissons[i].type]->h / 2);
                         poissons[i].delai_bulle = DELAI_BULLE;
                     }
 
@@ -309,7 +309,7 @@ void jouer_niveau1(void) {
 
             int progression = vaisseau_x * 100 / LARGEUR_DECOR;
             if (progression >= prochain_palier && !bonus.actif) {
-                generer_bonus(camera_x, collision, coeur_img);
+                BonusLife(camera_x, collision, coeur_img);
                 prochain_palier += 30;
             }
 
