@@ -1,20 +1,30 @@
 #include "header.h"
 
-void ajouter_requin(int camera_x, int y_min, int y_max) {
+void ajouter_requin(int camera_x, int y_min, int y_max, BITMAP *collision) {
     if (y_max > HAUTEUR_ECRAN - requin_img->h) {
         y_max = HAUTEUR_ECRAN - requin_img->h;
     }
 
     for (int i = 0; i < MAX_REQUINS; i++) {
         if (!requins[i].actif) {
-            requins[i].x = camera_x + LARGEUR_ECRAN + rand() % 200;
+            int tentative = 0;
+            const int MAX_TENTATIVES = 10;
 
-            // Choisir une hauteur entre y_min et y_max
-            requins[i].y = y_min + rand() % (y_max - y_min + 1);
+            while (tentative < MAX_TENTATIVES) {
+                int x = camera_x + LARGEUR_ECRAN + rand() % 200;
+                int y = y_min + rand() % (y_max - y_min + 1);
 
-            requins[i].actif = 1;
-            requins[i].delai_tir = DELAI_TIR_REQUIN;
-            requins[i].clignote = 0;
+                if (positionRequinValide(x, y, requin_img, collision)) {
+                    requins[i].x = x;
+                    requins[i].y = y;
+                    requins[i].actif = 1;
+                    requins[i].delai_tir = DELAI_TIR_REQUIN;
+                    requins[i].clignote = 0;
+                    break;
+                }
+                tentative++;
+            }
+
             break;
         }
     }
@@ -140,6 +150,9 @@ void jouer_niveau2(void) {
             if (key[KEY_LEFT]) new_x -= VITESSE_VAISSEAU;
             if (key[KEY_UP]) new_y -= VITESSE_VAISSEAU;
             if (key[KEY_DOWN]) new_y += VITESSE_VAISSEAU;
+            if (new_x < camera_x) new_x = camera_x;
+            if (new_x > camera_x + LARGEUR_ECRAN - vaisseau_img->w)
+                new_x = camera_x + LARGEUR_ECRAN - vaisseau_img->w;
 
             if (positionValide(new_x, new_y, collision, vaisseau_img)) {
                 vaisseau_x = new_x;
@@ -192,7 +205,7 @@ void jouer_niveau2(void) {
                 if (poissons[i].actif) {
                     poissons[i].x -= 2;
                     poissons[i].y += poissons[i].direction_y;
-                    if (!positionValide(poissons[i].x, poissons[i].y, poisson_imgs[poissons[i].type], collision)) {
+                    if (!positionPoissonValide(poissons[i].x, poissons[i].y, poisson_imgs[poissons[i].type], collision)) {
                         poissons[i].direction_y *= -1;
                         poissons[i].y += poissons[i].direction_y * 2;
                     }
@@ -306,7 +319,7 @@ void jouer_niveau2(void) {
                         dents[i].x > vaisseau_x && dents[i].x < vaisseau_x + vaisseau_img->w &&
                         dents[i].y > vaisseau_y && dents[i].y < vaisseau_y + vaisseau_img->h) {
 
-                        vie_temporaire -= DEGAT_BULLE;
+                        vie_temporaire -= DEGAT_DENT;
                         if (vie_temporaire <= 0) {
                             vies--;
                             vie_temporaire = 100;
@@ -323,7 +336,7 @@ void jouer_niveau2(void) {
             static int compteur_requin = 0;
             compteur_requin++;
             if (compteur_requin > 300 + rand() % 200) {
-                ajouter_requin(camera_x,0,500);
+                ajouter_requin(camera_x,0,500, collision);
                 compteur_requin = 0;
             }
 
@@ -331,6 +344,7 @@ void jouer_niveau2(void) {
             for (int i = 0; i < MAX_REQUINS; i++) {
                 if (requins[i].actif) {
                     requins[i].x -= 3;
+
 
                     // Tir de bulle
                     requins[i].delai_tir--;
@@ -530,5 +544,5 @@ void jouer_niveau2(void) {
     destroy_bitmap(epine_img);
     destroy_bitmap(dent_img);
 
-    for (int i = 0; i < NB_TYPES_POISSONS; i++) destroy_bitmap(poisson_imgs[i]);
+
 }
