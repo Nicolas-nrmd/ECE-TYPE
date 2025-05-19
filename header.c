@@ -28,7 +28,7 @@
 #define DELAI_TIR_ETOILE 100
 #define MAX_EPINES_ETOILE 60
 
-#define MAX_REQUINS 13
+#define MAX_REQUINS 16
 #define DELAI_TIR_REQUIN 100
 #define DEGAT_REQUIN 50
 #define DEGAT_DENT 50
@@ -37,7 +37,6 @@
 #define BOSS_FRAME_COUNT 5
 #define BOSS_FRAME_WIDTH 187
 #define BOSS_FRAME_HEIGHT 159
-#define MAX_MINES 10
 
 typedef struct {
     int x, y;
@@ -53,7 +52,6 @@ typedef struct {
 typedef struct {
     int x, y;
     int actif;
-    int speciale;
 } Torpille;
 
 typedef struct {
@@ -168,6 +166,12 @@ extern epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
 
 void tirer_epine_etoile(int x, int y);
 epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
+
+void tireTorpilleSpeciale(int x, int y);
+extern int torpille_speciale_active;
+extern time_t temps_activation_torpille;
+extern BITMAP *torpille2_img;
+
 
 
 
