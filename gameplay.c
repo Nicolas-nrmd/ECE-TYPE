@@ -97,11 +97,22 @@ void tirer_bulle_etoile(int x, int y) {
         }
     }
 }
+void tireTorpilleSpeciale(int x, int y) {
+    for (int i = 0; i < MAX_TORPILLES; i++) {
+        if (!torpilles[i].actif) {
+            torpilles[i].x = x;
+            torpilles[i].y = y;
+            torpilles[i].actif = 2; // différent de 1 pour repérer les spéciales
+            break;
+        }
+    }
+}
 
 
 
 
-void jouer_niveau1(int progression_forcee) {
+
+void jouer_niveau1() {
     srand(time(NULL));
 
     install_keyboard();
@@ -116,6 +127,10 @@ void jouer_niveau1(int progression_forcee) {
     coeur_img = load_bitmap("coeur.bmp", NULL);
     bulle_img = load_bitmap("bulle.bmp", NULL);
     etoile_img = load_bitmap("etoile.bmp", NULL);
+
+    int torpille_speciale_active = 0;
+    time_t temps_activation_torpille = 0;
+    BITMAP *torpille2_img = load_bitmap("torpille2.bmp", NULL);
 
     for (int i = 0; i < MAX_ETOILES; i++) etoiles[i].actif = 0;
     for (int i = 0; i < MAX_BULLES_ETOILE; i++) bulles_etoile[i].actif = 0;
@@ -167,10 +182,15 @@ void jouer_niveau1(int progression_forcee) {
                 dernier_choc = clock();
             }
             static int tir_delay = 0;
-            if (key[KEY_SPACE]) {
-                tireTorpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
-                tir_delay = 10;  // délai entre tirs
+            if (key[KEY_SPACE] && tir_delay == 0) {
+                if (torpille_speciale_active) {
+                    tireTorpilleSpeciale(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
+                } else {
+                    tireTorpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
+                }
+                tir_delay = 10;
             }
+
             if (tir_delay > 0) tir_delay--;
 
             for (int i = 0; i < MAX_TORPILLES; i++) {
@@ -256,20 +276,31 @@ void jouer_niveau1(int progression_forcee) {
                         }
                 }
             }
+            if (torpille_speciale_active && time(NULL) - temps_activation_torpille >= 10) {
+                torpille_speciale_active = 0;
+            }
 
-            for (int i = 0; i < MAX_ETOILES; i++) {
-                if (etoiles[i].actif) {
-                    for (int j = 0; j < MAX_TORPILLES; j++) {
-                        if (torpilles[j].actif) {
-                            if (torpilles[j].x > etoiles[i].x && torpilles[j].x < etoiles[i].x + etoile_img->w &&
-                                torpilles[j].y > etoiles[i].y && torpilles[j].y < etoiles[i].y + etoile_img->h) {
-                                etoiles[i].actif = 0;         // L'étoile est détruite
-                                torpilles[j].actif = 0;       // La torpille est détruite
-                                }
-                        }
+            for (int i = 0; i < MAX_TORPILLES; i++) {
+                if (torpilles[i].actif) {
+                    for (int j = 0; j < MAX_ETOILES; j++) {
+                        if (etoiles[j].actif &&
+                            torpilles[i].x + torpille_img->w > etoiles[j].x &&
+                            torpilles[i].x < etoiles[j].x + etoile_img->w &&
+                            torpilles[i].y + torpille_img->h > etoiles[j].y &&
+                            torpilles[i].y < etoiles[j].y + etoile_img->h) {
+
+                            // Collision détectée
+                            torpilles[i].actif = 0;
+                            etoiles[j].actif = 0;
+
+                            // Active la torpille spéciale pendant 10 secondes
+                            torpille_speciale_active = 1;
+                            temps_activation_torpille = time(NULL);
+                            }
                     }
                 }
             }
+
 
             static int compteur_etoiles = 0;
             compteur_etoiles++;
@@ -352,9 +383,10 @@ void jouer_niveau1(int progression_forcee) {
 
         for (int i = 0; i < MAX_TORPILLES; i++) {
             if (torpilles[i].actif) {
-                int tx = torpilles[i].x - camera_x;
-                if (tx >= 0 && tx < LARGEUR_ECRAN)
-                    masked_blit(torpille_img, buffer, 0, 0, tx, torpilles[i].y, torpille_img->w, torpille_img->h);
+                torpilles[i].x += 8;
+                if (torpilles[i].x > LARGEUR_DECOR) torpilles[i].actif = 0;
+                BITMAP *img = (torpilles[i].actif == 2) ? torpille2_img : torpille_img;
+                draw_sprite(buffer, img, torpilles[i].x - camera_x, torpilles[i].y);
             }
         }
 
