@@ -37,6 +37,7 @@
 #define BOSS_FRAME_COUNT 5
 #define BOSS_FRAME_WIDTH 187
 #define BOSS_FRAME_HEIGHT 159
+#define MAX_MINES 10
 
 typedef struct {
     int x, y;
