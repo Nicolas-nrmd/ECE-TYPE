@@ -4,7 +4,7 @@ char pseudo[MAX_PSEUDO] = "";
 int niveau_debloque = 1;
 BITMAP* fond_menu = NULL;
 
-void textout_gros(BITMAP* bmp, FONT* f, const char* txt, int x, int y, int color) {
+void textegros(BITMAP* bmp, FONT* f, const char* txt, int x, int y, int color) {//fonction pour afficher en plus gros le texte
     for (int dx = 0; dx < 2; dx++) {
         for (int dy = 0; dy < 2; dy++) {
             textout_centre_ex(bmp, f, txt, x + dx, y + dy, color, -1);
@@ -12,22 +12,22 @@ void textout_gros(BITMAP* bmp, FONT* f, const char* txt, int x, int y, int color
     }
 }
 
-void sauvegarder_progression(const char* pseudo, int niveau) {
-    FILE* f = fopen(FICHIER_SAUVEGARDE, "r");
+void sauvegarde(const char* pseudo, int niveau) {//sauvegarde la progression du joueur
+    FILE* f = fopen(FICHIER_SAUVEGARDE, "r");//ouvre le fichier de sauvegarde
     FILE* temp = fopen("temp.txt", "w");
     int trouve = 0;
     char p[MAX_PSEUDO];
     int n;
     if (f && temp) {
         while (fscanf(f, "%s %d", p, &n) == 2) {
-            if (strcmp(pseudo, p) == 0) {
+            if (strcmp(pseudo, p) == 0) {//compare le pseudo saisie avec les pseudos sauvegarder pour trouver la partie
                 fprintf(temp, "%s %d\n", pseudo, niveau);
                 trouve = 1;
             } else {
                 fprintf(temp, "%s %d\n", p, n);
             }
         }
-        if (!trouve)
+        if (!trouve)//si non trouvé alors le fichier est fermé
             fprintf(temp, "%s %d\n", pseudo, niveau);
         fclose(f);
         fclose(temp);
@@ -39,14 +39,14 @@ void sauvegarder_progression(const char* pseudo, int niveau) {
     }
 }
 
-int charger_progression(const char* pseudo_cherche, int* niveau_retourne) {
+int chargementPartie(const char* pseudo_cherche, int* niveau_retourne) {//pour charger un niveau deja joué
     FILE* f = fopen(FICHIER_SAUVEGARDE, "r");
     if (!f) return 0;
 
     char p[MAX_PSEUDO];
     int n;
     while (fscanf(f, "%s %d", p, &n) == 2) {
-        if (strcmp(pseudo_cherche, p) == 0) {
+        if (strcmp(pseudo_cherche, p) == 0) {//compare le pseudo saisie avec les pseudos sauvegarder pour trouver la partie
             *niveau_retourne = n;
             fclose(f);
             return 1;
@@ -56,18 +56,18 @@ int charger_progression(const char* pseudo_cherche, int* niveau_retourne) {
     return 0;
 }
 
-void dessiner_ecran_menu(const char* titre, const char* options[], int n, int selection) {
+void EcranMenu(const char* titre, const char* options[], int n, int selection) {
     if (fond_menu) blit(fond_menu, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
     else clear_to_color(screen, makecol(0, 0, 0));
 
-    textout_gros(screen, font, titre, SCREEN_W / 2, SCREEN_H / 2 - 100, makecol(255, 255, 255));
+    textegros(screen, font, titre, SCREEN_W / 2, SCREEN_H / 2 - 100, makecol(255, 255, 255));
     for (int i = 0; i < n; i++) {
         int color = (i == selection) ? makecol(255, 255, 0) : makecol(255, 255, 255);
-        textout_gros(screen, font, options[i], SCREEN_W / 2, SCREEN_H / 2 - 40 + i * 40, color);
+        textegros(screen, font, options[i], SCREEN_W / 2, SCREEN_H / 2 - 40 + i * 40, color);
     }
 }
 
-int saisir_pseudo_utilisateur(char* destination) {
+int GestionPseudo(char* destination) {
     char buffer[MAX_PSEUDO] = "";
     int index = 0;
 
@@ -75,9 +75,9 @@ int saisir_pseudo_utilisateur(char* destination) {
         if (fond_menu) blit(fond_menu, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H);
         else clear_to_color(screen, makecol(0, 0, 0));
 
-        textout_gros(screen, font, "Entrez votre pseudo :", SCREEN_W / 2, 200, makecol(255, 255, 255));
-        textout_gros(screen, font, "(ECHAP pour annuler)", SCREEN_W / 2, 250, makecol(150, 150, 150));
-        textout_gros(screen, font, buffer, SCREEN_W / 2, 300, makecol(255, 255, 0));
+        textegros(screen, font, "Entrez votre pseudo :", SCREEN_W / 2, 200, makecol(255, 255, 255));
+        textegros(screen, font, "(ECHAP pour annuler)", SCREEN_W / 2, 250, makecol(150, 150, 150));
+        textegros(screen, font, buffer, SCREEN_W / 2, 300, makecol(255, 255, 0));
 
         if (keypressed()) {
             int k = readkey();
@@ -100,7 +100,9 @@ int saisir_pseudo_utilisateur(char* destination) {
     }
 }
 
-void menu_niveaux() {
+void gestionNiveaux() {
+    clear_keybuf();
+
     const char* options[] = {
         "Jouer Niveau 1",
         "Jouer Niveau 2",
@@ -111,36 +113,44 @@ void menu_niveaux() {
     int selection = 0;
 
     while (1) {
-        dessiner_ecran_menu("Choisissez un niveau :", options, n_options, selection);
+        EcranMenu("Choisissez un niveau :", options, n_options, selection);
 
-        if (key[KEY_DOWN]) { rest(150); selection = (selection + 1) % n_options; }
-        if (key[KEY_UP]) { rest(150); selection = (selection - 1 + n_options) % n_options; }
+        if (keypressed()) {
+            int k = readkey();
+            int scancode = k >> 8;
 
-        if (key[KEY_ENTER]) {
-            rest(200);
+            if (scancode == KEY_DOWN) {
+                selection = (selection + 1) % n_options;
+            } else if (scancode == KEY_UP) {
+                selection = (selection - 1 + n_options) % n_options;
+            } else if (scancode == KEY_ENTER) {
+                if (selection == 3) return;  // Retour
 
-            if (selection == 3) return;  // Retour
+                if (selection + 1 <= niveau_debloque) {
+                    allegro_message("Lancement du niveau %d...", selection + 1);
 
-            if (selection + 1 <= niveau_debloque) {
-                allegro_message("Lancement du niveau %d...", selection + 1);
-
-                // Appelle le bon niveau selon la sélection
-                if (selection == 0) {
-                    jouer_niveau1();
+                    if (selection == 0) {
+                        jouer_niveau1();
+                        if (niveau_debloque < 2) {
+                            niveau_debloque = 2;
+                            sauvegarde(pseudo, niveau_debloque);
+                        }
+                    } else if (selection == 1) {
+                        jouer_niveau2();
+                        if (niveau_debloque < 3) {
+                            niveau_debloque = 3;
+                            sauvegarde(pseudo, niveau_debloque);
+                        }
+                    } else if (selection == 2) {
+                        jouer_niveau3();
+                    }
+                } else {
+                    allegro_message("Niveau verrouillé !");
                 }
-
-
-                // Met à jour la progression
-                if (selection + 1 > niveau_debloque) {
-                    niveau_debloque = selection + 1;
-                    sauvegarder_progression(pseudo, niveau_debloque);
-                }
-            } else {
-                allegro_message("Niveau verrouillé !");
+            } else if (scancode == KEY_ESC) {
+                return;
             }
         }
-
-        if (key[KEY_ESC]) return;
 
         rest(30);
     }
@@ -166,7 +176,7 @@ int menu() {
     int selection = 0;
 
     while (1) {
-        dessiner_ecran_menu("MENU PRINCIPAL", options, 3, selection);
+        EcranMenu("MENU PRINCIPAL", options, 3, selection);
 
         if (key[KEY_DOWN]) { rest(150); selection = (selection + 1) % 3; }
         if (key[KEY_UP]) { rest(150); selection = (selection - 1 + 3) % 3; }
@@ -174,16 +184,16 @@ int menu() {
         if (key[KEY_ENTER]) {
             rest(200);
             if (selection == 0) {
-                if (saisir_pseudo_utilisateur(pseudo)) {
+                if (GestionPseudo(pseudo)) {
                     niveau_debloque = 1;
-                    sauvegarder_progression(pseudo, niveau_debloque);
-                    menu_niveaux();
+                    sauvegarde(pseudo, niveau_debloque);
+                    gestionNiveaux();
                 }
             } else if (selection == 1) {
-                if (saisir_pseudo_utilisateur(pseudo)) {
-                    if (charger_progression(pseudo, &niveau_debloque)) {
+                if (GestionPseudo(pseudo)) {
+                    if (chargementPartie(pseudo, &niveau_debloque)) {
                         allegro_message("Bienvenue %s ! Dernier niveau atteint : %d", pseudo, niveau_debloque);
-                        menu_niveaux();
+                        gestionNiveaux();
                     } else {
                         allegro_message("Pseudo inconnu !");
                     }
