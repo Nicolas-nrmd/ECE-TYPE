@@ -48,6 +48,43 @@ void ajouterPoisson(int camera_x, BITMAP *collision) {
     }
 }
 
+
+void tirer_epine_etoile(int x, int y) {
+    for (int i = 0; i < MAX_EPINES_ETOILE; i++) {
+        if (!epines_etoile[i].actif) {
+            epines_etoile[i].actif = 1;
+            epines_etoile[i].x = x;
+            epines_etoile[i].y = y;
+
+            // Angle aléatoire entre 135° et 45° (en radians) pour viser vers le haut
+            float angle = ((rand() % 91) + 45) * (M_PI / 180.0); // entre π/4 et 3π/4
+
+            float vitesse = 4.0f; // ajustable selon besoin
+            epines_etoile[i].dx = cos(angle) * vitesse;
+            epines_etoile[i].dy = -fabs(sin(angle)) * vitesse; // toujours vers le haut (négatif)
+
+            break;
+        }
+    }
+}
+
+void tireDent(int x, int y) {
+    for (int i = 0; i < MAX_DENTS; i++) {
+        if (!dents[i].actif) {
+            dents[i].actif = 1;
+            dents[i].x = x;
+            dents[i].y = y;
+            dents[i].dx = -5;  // vers la gauche
+            dents[i].dy = 0;
+            break;
+        }
+    }
+}
+
+
+
+
+
 void jouer_niveau2(void) {
     srand(time(NULL));
 
@@ -64,10 +101,15 @@ void jouer_niveau2(void) {
     bulle_img = load_bitmap("bulle.bmp", NULL);
     etoile_img = load_bitmap("oursin.bmp", NULL);
     requin_img = load_bitmap("requin.bmp", NULL);
-    poisson_imgs[0] = load_bitmap("poissonennemi.bmp", NULL);
+    poisson_imgs[0] = load_bitmap("poisson5.bmp", NULL);
+    BITMAP *epine_img = load_bitmap("epine.bmp", NULL);
+    BITMAP *dent_img = load_bitmap("dents.bmp", NULL);
+
+
+
 
     for (int i = 0; i < MAX_ETOILES; i++) etoiles[i].actif = 0;
-    for (int i = 0; i < MAX_BULLES_ETOILE; i++) bulles_etoile[i].actif = 0;
+    for (int i = 0; i < MAX_EPINES_ETOILE; i++) epines_etoile[i].actif = 0;
     int vie_temporaire = 100; // Jauge à 100%
     const int DEGAT_BULLE = 25; // Dégâts infligés par une bulle
 
@@ -214,7 +256,7 @@ void jouer_niveau2(void) {
 
                     etoiles[i].delai_tir--;
                     if (etoiles[i].delai_tir <= 0) {
-                        tirer_bulle_etoile(etoiles[i].x + etoile_img->w / 2, etoiles[i].y);
+                        tirer_epine_etoile(etoiles[i].x + etoile_img->w / 2, etoiles[i].y + etoile_img->h / 2);
                         etoiles[i].delai_tir = DELAI_TIR_ETOILE;
                     }
 
@@ -223,15 +265,21 @@ void jouer_niveau2(void) {
                 }
             }
 
-            for (int i = 0; i < MAX_BULLES_ETOILE; i++) {
-                if (bulles_etoile[i].actif) {
-                    bulles_etoile[i].y -= 5;
-                    if (bulles_etoile[i].y < 0)
-                        bulles_etoile[i].actif = 0;
+            for (int i = 0; i < MAX_EPINES_ETOILE; i++) {
+                if (epines_etoile[i].actif) {
+                    epines_etoile[i].x += epines_etoile[i].dx;
+                    epines_etoile[i].y += epines_etoile[i].dy;
 
+                    // Désactivation si hors de l'écran
+                    if (epines_etoile[i].x < 0 || epines_etoile[i].x >= LARGEUR_DECOR ||
+                        epines_etoile[i].y < 0 || epines_etoile[i].y >= HAUTEUR_DECOR) {
+                        epines_etoile[i].actif = 0;
+                        }
+
+                    // Collision avec le vaisseau
                     if (!clignote_vaisseau &&
-                        bulles_etoile[i].x > vaisseau_x && bulles_etoile[i].x < vaisseau_x + vaisseau_img->w &&
-                        bulles_etoile[i].y > vaisseau_y && bulles_etoile[i].y < vaisseau_y + vaisseau_img->h) {
+                        epines_etoile[i].x > vaisseau_x && epines_etoile[i].x < vaisseau_x + vaisseau_img->w &&
+                        epines_etoile[i].y > vaisseau_y && epines_etoile[i].y < vaisseau_y + vaisseau_img->h) {
 
                         vie_temporaire -= DEGAT_BULLE;
                         if (vie_temporaire <= 0) {
@@ -240,11 +288,37 @@ void jouer_niveau2(void) {
                             clignote_vaisseau = 1;
                             dernier_choc = clock();
                         }
-                        bulles_etoile[i].actif = 0;
+                        epines_etoile[i].actif = 0;
                         }
-
                 }
             }
+
+            for (int i = 0; i < MAX_DENTS; i++) {
+                if (dents[i].actif) {
+                    dents[i].x += dents[i].dx;
+                    dents[i].y += dents[i].dy;
+
+                    if (dents[i].x < 0 || dents[i].x > LARGEUR_DECOR)
+                        dents[i].actif = 0;
+
+                    // Collision avec le vaisseau
+                    if (!clignote_vaisseau &&
+                        dents[i].x > vaisseau_x && dents[i].x < vaisseau_x + vaisseau_img->w &&
+                        dents[i].y > vaisseau_y && dents[i].y < vaisseau_y + vaisseau_img->h) {
+
+                        vie_temporaire -= DEGAT_BULLE;
+                        if (vie_temporaire <= 0) {
+                            vies--;
+                            vie_temporaire = 100;
+                            clignote_vaisseau = 1;
+                            dernier_choc = clock();
+                        }
+                        dents[i].actif = 0;
+                        }
+                }
+            }
+
+
             // Apparition aléatoire de requins
             static int compteur_requin = 0;
             compteur_requin++;
@@ -261,7 +335,7 @@ void jouer_niveau2(void) {
                     // Tir de bulle
                     requins[i].delai_tir--;
                     if (requins[i].delai_tir <= 0) {
-                        tireBulle(requins[i].x, requins[i].y + requin_img->h / 2);
+                        tireDent(requins[i].x, requins[i].y + requin_img->h / 2);
                         requins[i].delai_tir = DELAI_TIR_REQUIN;
                     }
 
@@ -338,6 +412,15 @@ void jouer_niveau2(void) {
             }
         }
 
+        for (int i = 0; i < MAX_DENTS; i++) {
+            if (dents[i].actif) {
+                int dx = dents[i].x - camera_x;
+                if (dx >= 0 && dx < LARGEUR_ECRAN)
+                    masked_blit(dent_img, buffer, 0, 0, dx, dents[i].y, dent_img->w, dent_img->h);
+            }
+        }
+
+
         for (int i = 0; i < MAX_POISSONS; i++) {
             if (poissons[i].actif) {
                 int px = poissons[i].x - camera_x;
@@ -355,6 +438,8 @@ void jouer_niveau2(void) {
                 }
             }
         }
+
+
 
         if (bonus.actif && !bonus.pris) {
             int bx = bonus.x - camera_x;
@@ -390,13 +475,14 @@ void jouer_niveau2(void) {
             }
         }
 
-        for (int i = 0; i < MAX_BULLES_ETOILE; i++) {
-            if (bulles_etoile[i].actif) {
-                int bx = bulles_etoile[i].x - camera_x;
-                if (bx >= 0 && bx < LARGEUR_ECRAN)
-                    masked_blit(bulle_img, buffer, 0, 0, bx, bulles_etoile[i].y, bulle_img->w, bulle_img->h);
+        for (int i = 0; i < MAX_EPINES_ETOILE; i++) {
+            if (epines_etoile[i].actif) {
+                int ex = epines_etoile[i].x - camera_x;
+                if (ex >= 0 && ex < LARGEUR_ECRAN)
+                    masked_blit(epine_img, buffer, 0, 0, ex, epines_etoile[i].y, epine_img->w, epine_img->h);
             }
         }
+
         int progression = vaisseau_x * 100 / LARGEUR_DECOR;
         if (progression >= 99) {
             gestionVictoire(2);  // Appelle la fonction avec le niveau en cours
@@ -441,6 +527,8 @@ void jouer_niveau2(void) {
     destroy_bitmap(bulle_img);
     destroy_bitmap(etoile_img);
     destroy_bitmap(poisson_imgs);
+    destroy_bitmap(epine_img);
+    destroy_bitmap(dent_img);
 
     for (int i = 0; i < NB_TYPES_POISSONS; i++) destroy_bitmap(poisson_imgs[i]);
 }
