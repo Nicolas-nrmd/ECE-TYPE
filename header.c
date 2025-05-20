@@ -195,6 +195,11 @@ void jouer_niveau3(void);
 void tirer_epine_etoile(int x, int y);
 
 void tireTorpilleSpeciale(int x, int y);
+void tir(int x, int y);
+void tireFeu(int x, int y);
+int mine_position_valide(int x, int y, BITMAP *objet_img, BITMAP *vaisseau);
+
+
 extern int torpille_speciale_active;
 extern time_t temps_activation_torpille;
 extern BITMAP *torpille2_img;
