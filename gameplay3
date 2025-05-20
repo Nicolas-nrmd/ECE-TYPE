@@ -1,0 +1,536 @@
+#include "header2.h"
+
+Torpille torpilles[MAX_TORPILLES];
+Poisson poissons[MAX_POISSONS];
+Bulle bulles[MAX_BULLES];
+Mine mines[MAX_MINES];
+BITMAP *poisson_imgs[NB_TYPES_POISSONS];
+BITMAP *coeur_img, *bulle_img, *feu_img, *tir_img;
+
+void tir(int x, int y) {
+    for (int i = 0; i < MAX_TIR; i++) {
+        if (!tirs[i].actif) {
+            tirs[i].actif = 1;
+            tirs[i].x = x;
+            tirs[i].y = y;
+            tirs[i].dx = -5;  // vers la gauche
+            tirs[i].dy = 0;
+            break;
+        }
+    }
+}
+
+void tireFeu(int x, int y) {
+    for (int i = 0; i < MAX_FEU; i++) {
+        if (!feus[i].actif) {
+            feus[i].actif = 1;
+            feus[i].x = x;
+            feus[i].y = y;
+            feus[i].dx = -5;  // vers la gauche
+            feus[i].dy = 0;
+            break;
+        }
+    }
+}
+
+void tirer_torpille(int x, int y) {
+    for (int i = 0; i < MAX_TORPILLES; i++) {
+        if (!torpilles[i].actif) {
+            torpilles[i].x = x;
+            torpilles[i].y = y;
+            torpilles[i].actif = 1;
+            break;
+        }
+    }
+}
+
+void tirer_bulle(int x, int y) {
+    for (int i = 0; i < MAX_BULLES; i++) {
+        if (!bulles[i].actif) {
+            bulles[i].x = x;
+            bulles[i].y = y;
+            bulles[i].actif = 1;
+            break;
+        }
+    }
+}
+int mine_position_valide(int x, int y, BITMAP *objet_img, BITMAP *vaisseau) {
+
+    for (int i = 0; i < vaisseau->w; i++) {
+        for (int j = 0; j < vaisseau->h; j++) {
+            int couleur_vaisseau = getpixel(vaisseau, i, j);
+            if (couleur_vaisseau != makecol(255, 0, 255)) { // pixel visible du vaisseau (pas transparent)
+
+                int px = x + i;
+                int py = y + j;
+
+                if (px >= 0 && px < objet_img->w && py >= 0 && py < objet_img->h) {
+                    int couleur_objet = getpixel(objet_img, px, py);
+                    if (couleur_objet != makecol(255, 0, 255)) {
+                        // pixel visible aussi sur l'objet → collision
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+    return 1;
+}
+
+int est_position_valide(int x, int y, BITMAP *collision, BITMAP *vaisseau) {
+    for (int i = 0; i < vaisseau->w; i++) {
+        for (int j = 0; j < vaisseau->h; j++) {
+            int px = x + i;
+            int py = y + j;
+            if (px >= 0 && px < collision->w && py >= 0 && py < collision->h) {
+                int couleur = getpixel(collision, px, py);
+                if (couleur == makecol(0, 0, 0)) return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+int position_poisson_valide(int x, int y, BITMAP *img, BITMAP *collision) {
+    for (int i = 0; i < img->w; i++) {
+        for (int j = 0; j < img->h; j++) {
+            int px = x + i;
+            int py = y + j;
+            if (px >= 0 && px < collision->w && py >= 0 && py < collision->h) {
+                if (getpixel(collision, px, py) == makecol(0, 0, 0)) return 0;
+            }
+        }
+    }
+    return 1;
+}
+
+void ajouter_banc_poissons(int camera_x, BITMAP *collision) {
+    int type = rand() % NB_TYPES_POISSONS;
+    int taille_banc = 3 + rand() % 1;
+    for (int i = 0; i < MAX_POISSONS && taille_banc > 0; i++) {
+        if (!poissons[i].actif) {
+            int x = camera_x + LARGEUR_ECRAN + rand() % 200;
+            int y;
+            int tentative = 0;
+            do {
+                y = rand() % (HAUTEUR_DECOR - poisson_imgs[type]->h);
+                tentative++;
+            } while (!position_poisson_valide(x, y, poisson_imgs[type], collision) && tentative < 10);
+
+            if (tentative < 10) {
+                poissons[i].type = type;
+                poissons[i].x = x;
+                poissons[i].y = y;
+                poissons[i].actif = 1;
+                poissons[i].clignote = 0;
+                poissons[i].temps_touche = 0;
+                poissons[i].direction_y = (rand() % 3) - 1;
+                poissons[i].delai_bulle = rand() % DELAI_BULLE;
+                taille_banc--;
+            }
+        }
+    }
+}
+
+
+void jouer_niveau3(void) {
+    srand(time(NULL));
+    install_keyboard();
+    set_color_depth(desktop_color_depth());
+    set_gfx_mode(GFX_AUTODETECT_WINDOWED, LARGEUR_ECRAN, HAUTEUR_ECRAN, 0, 0);
+
+    BITMAP *buffer = create_bitmap(LARGEUR_ECRAN, HAUTEUR_ECRAN);
+    BITMAP *decor = load_bitmap("biome3.bmp", NULL);
+    BITMAP *collision = load_bitmap("collision3.bmp", NULL);
+    BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
+    BITMAP *torpille_img = load_bitmap("tir.bmp", NULL);
+    coeur_img = load_bitmap("coeur.bmp", NULL);
+    bulle_img = load_bitmap("bulle.bmp", NULL);
+    feu_img = load_bitmap("feu.bmp", NULL);
+    BITMAP *boss_spritesheet = load_bitmap("boss_spritesheet.bmp", NULL);
+    BITMAP *objet_img = load_bitmap("mine.bmp", NULL);
+    tir_img = load_bitmap("tirs.bmp", NULL);
+    tir_img = load_bitmap("tirs.bmp", NULL);
+
+    Boss boss = {0};
+    boss.actif = 0;
+    boss.hp = 20;
+    boss.spritesheet = boss_spritesheet;
+    boss.frame = 0;
+    boss.frame_timer = 0;
+    boss.largeur_frame = 64;
+    boss.hauteur_frame = 350;
+    boss.nb_frames = 4;
+
+    for (int i = 0; i < NB_TYPES_POISSONS; i++) {
+        char nom[20];
+        sprintf(nom, "ennemi%d.bmp", i + 1);
+        poisson_imgs[i] = load_bitmap(nom, NULL);
+        if (!poisson_imgs[i]) {
+            allegro_message("Erreur chargement %s", nom);
+            return 1;
+        }
+    }
+    for (int i = 0; i < MAX_MINES; i++) {
+        mines[i].x = rand() % (LARGEUR_DECOR - objet_img->w);
+        mines[i].y = rand() % (HAUTEUR_DECOR - objet_img->h);
+        mines[i].actif = 1;
+    }
+
+    int vaisseau_x = 100, vaisseau_y = HAUTEUR_ECRAN / 2;
+    int camera_x = 0, vies = NB_VIES, en_pause = 0;
+    time_t debut_temps = time(NULL);
+    int compteur_poisson = 0, clignote_vaisseau = 0;
+    clock_t dernier_choc = 0;
+    static int oscillation_timer = 0;
+
+    for (int i = 0; i < MAX_TORPILLES; i++) torpilles[i].actif = 0;
+    for (int i = 0; i < MAX_POISSONS; i++) poissons[i].actif = 0;
+    for (int i = 0; i < MAX_BULLES; i++) bulles[i].actif = 0;
+    for (int i = 0; i < MAX_FEU; i++) bulles[i].actif = 0;
+    for (int i = 0; i < MAX_TIR; i++) bulles[i].actif = 0;
+    int boss_delai_bulle = DELAI_BULLE_BOSS;
+    int boss_bulle_timer = 0;
+    int boss_frame_timer = 0;
+    int boss_frame_delay = 8;
+    int boss_frame = 0;
+
+
+    while (!key[KEY_ESC] && vies > 0) {
+        if (key[KEY_P]) { rest(200); en_pause = !en_pause; }
+
+        if (!en_pause) {
+            int new_x = vaisseau_x, new_y = vaisseau_y;
+            if (key[KEY_RIGHT]) new_x += VITESSE_VAISSEAU;
+            if (key[KEY_LEFT]) new_x -= VITESSE_VAISSEAU;
+            if (key[KEY_UP]) new_y -= VITESSE_VAISSEAU;
+            if (key[KEY_DOWN]) new_y += VITESSE_VAISSEAU;
+            if (new_x < camera_x) new_x = camera_x;
+            if (new_x > camera_x + LARGEUR_ECRAN - vaisseau_img->w)
+                new_x = camera_x + LARGEUR_ECRAN - vaisseau_img->w;
+
+            if (key[KEY_H]) { // Appuie sur H pour aller à 50% du niveau
+                vaisseau_x = 6600;             // Position du joueur à 50% du niveau
+                camera_x = vaisseau_x - LARGEUR_ECRAN / 2; // Centrer la caméra autour du joueur
+                if (camera_x < 0) camera_x = 0; // Limite gauche
+                if (camera_x > LARGEUR_DECOR - LARGEUR_ECRAN)  // Limite droite
+                    camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+                rest(200); // Anti-rebond : petite pause pour éviter répétition si la touche reste enfoncée
+            }
+
+
+
+            if (est_position_valide(new_x, new_y, collision, vaisseau_img)) {
+                vaisseau_x = new_x;
+                vaisseau_y = new_y;
+            } else if (clock() - dernier_choc > 1000) {
+                vies--;
+                clignote_vaisseau = 1;
+                dernier_choc = clock();
+            }
+
+
+            static int tir_delay = 0;
+            if (key[KEY_SPACE] && tir_delay <= 0) {
+                tirer_torpille(vaisseau_x + vaisseau_img->w, vaisseau_y + vaisseau_img->h / 2);
+                tir_delay = 10;  // délai entre tirs
+            }
+            if (tir_delay > 0) tir_delay--;
+
+            for (int i = 0; i < MAX_TORPILLES; i++) {
+                if (torpilles[i].actif) {
+                    torpilles[i].x += 8;
+                    if (torpilles[i].x > LARGEUR_DECOR) torpilles[i].actif = 0;
+                }
+                if (boss.actif) {
+                    for (int i = 0; i < MAX_TORPILLES; i++) {
+                        if (torpilles[i].actif &&
+                            torpilles[i].x < boss.x + boss.largeur_frame &&
+                            torpilles[i].x + torpille_img->w > boss.x &&
+                            torpilles[i].y < boss.y + boss.hauteur_frame &&
+                            torpilles[i].y + torpille_img->h > boss.y) {
+
+                            boss.hp--;
+                            torpilles[i].actif = 0;
+
+                            if (boss.hp <= 0) {
+                                boss.actif = 0;
+                                allegro_message("VICTOIRE ! Boss éliminé !");
+                                rest(2000);
+                                return 0;
+                            }
+                            }
+                    }
+                }
+            }
+            int progression = (vaisseau_x * 100) / (LARGEUR_DECOR - LARGEUR_ECRAN);
+            if (!boss.actif && progression >= 94) {
+                boss.actif = 1;
+                boss.x = camera_x + LARGEUR_ECRAN + 200;
+                boss.y_init = HAUTEUR_ECRAN / 2 - boss.hauteur_frame / 2;
+                boss.y = boss.y_init;
+                boss.frame = 0;
+                }
+
+            for (int i = 0; i < MAX_MINES; i++) {
+                if (!clignote_vaisseau &&
+                    mines[i].actif &&
+                    mines[i].x < vaisseau_x + vaisseau_img->w &&
+                    mines[i].x + objet_img->w > vaisseau_x &&
+                    mines[i].y < vaisseau_y + vaisseau_img->h &&
+                    mines[i].y + objet_img->h > vaisseau_y) {
+
+                    vies--;
+                    clignote_vaisseau = 1;
+                    dernier_choc = clock();
+                    bulles[i].actif = 0; // Désactive la mine
+                    }
+            }
+
+            for (int i = 0; i < MAX_TORPILLES; i++) {
+                if (torpilles[i].actif) {
+                    for (int j = 0; j < MAX_MINES; j++) {
+                        if (mines[j].actif) {
+                            if (torpilles[i].x < mines[j].x + objet_img->w &&
+                                torpilles[i].x + torpille_img->w > mines[j].x &&
+                                torpilles[i].y < mines[j].y + objet_img->h &&
+                                torpilles[i].y + torpille_img->h > mines[j].y) {
+
+                                // Collision détectée : désactive torpille et mine
+                                torpilles[i].actif = 0;
+                                mines[j].actif = 0;
+
+                                // Tu peux aussi ajouter ici un effet, explosion, score, etc.
+                                }
+                        }
+                    }
+                }
+            }
+
+            for (int i = 0; i < MAX_BULLES; i++) {
+                if (bulles[i].actif) {
+                    bulles[i].x -= 5;
+                    if (bulles[i].x < 0) bulles[i].actif = 0;
+
+                    // Collision avec le sous-marin
+                    if (!clignote_vaisseau &&
+                        bulles[i].x > vaisseau_x && bulles[i].x < vaisseau_x + vaisseau_img->w &&
+                        bulles[i].y > vaisseau_y && bulles[i].y < vaisseau_y + vaisseau_img->h) {
+                        vies--;
+                        clignote_vaisseau = 1;
+                        dernier_choc = clock();
+                        bulles[i].actif = 0;
+                    }
+                }
+            }
+
+            for (int i = 0; i < MAX_TIR; i++) {
+                if (tirs[i].actif) {
+                    tirs[i].x -= 5;
+                    if (tirs[i].x < 0) tirs[i].actif = 0;
+
+                    // Collision avec le sous-marin
+                    if (!clignote_vaisseau &&
+                        tirs[i].x > vaisseau_x && tirs[i].x < vaisseau_x + vaisseau_img->w &&
+                        tirs[i].y > vaisseau_y && tirs[i].y < vaisseau_y + vaisseau_img->h) {
+                        vies--;
+                        clignote_vaisseau = 1;
+                        dernier_choc = clock();
+                        tirs[i].actif = 0;
+                        }
+                }
+            }
+
+            for (int i = 0; i < MAX_FEU; i++) {
+                if (feus[i].actif) {
+                    feus[i].x -= 5;
+                    if (feus[i].x < 0) feus[i].actif = 0;
+
+                    // Collision avec le sous-marin
+                    if (!clignote_vaisseau &&
+                        feus[i].x > vaisseau_x && feus[i].x < vaisseau_x + vaisseau_img->w &&
+                        feus[i].y > vaisseau_y && feus[i].y < vaisseau_y + vaisseau_img->h) {
+                        vies--;
+                        clignote_vaisseau = 1;
+                        dernier_choc = clock();
+                        feus[i].actif = 0;
+                        }
+                }
+            }
+
+            if (!boss.actif) {
+                compteur_poisson++;
+                if (compteur_poisson > 300) {
+                    ajouter_banc_poissons(camera_x, collision);
+                    compteur_poisson = 0;
+                }
+            }
+            if (boss.actif) {
+                boss_bulle_timer++;
+                if (boss_bulle_timer > boss_delai_bulle) {
+                    tireFeu(boss.x, boss.y + boss.hauteur_frame / 2);
+                    boss_bulle_timer = 0;
+                }
+                boss_frame_timer++;
+                if (boss_frame_timer >= boss_frame_delay) {
+                    boss.frame = (boss.frame + 1) % BOSS_FRAME_COUNT;
+                    boss_frame_timer = 0;
+                }
+            }
+
+            for (int i = 0; i < MAX_POISSONS; i++) {
+                if (poissons[i].actif) {
+                    poissons[i].x -= 2;
+                    poissons[i].y += poissons[i].direction_y;
+                    if (!position_poisson_valide(poissons[i].x, poissons[i].y, poisson_imgs[poissons[i].type], collision)) {
+                        poissons[i].direction_y *= -1;
+                        poissons[i].y += poissons[i].direction_y * 2;
+                    }
+
+                    poissons[i].delai_bulle--;
+                    static int compteur_tir = 0;
+                    compteur_tir++;
+                    if (compteur_tir >= 10) { // on n'essaie de tirer que tous les 5 cycles (~100ms)
+                        for (int i = 0; i < MAX_POISSONS; i++) {
+                            if (poissons[i].actif) {
+                                poissons[i].delai_bulle--;
+                                if (poissons[i].delai_bulle <= 0) {
+                                    if (poissons[i].type == 0 || poissons[i].type == 2) {
+                                        tir(poissons[i].x - 10, poissons[i].y + poisson_imgs[poissons[1].type]->h / 2); // projectile spécial
+                                    } else {
+                                        tirer_bulle(poissons[i].x, poissons[i].y + poisson_imgs[poissons[i].type]->h / 2);
+                                    }
+                                    poissons[i].delai_bulle = 200 + rand() % 300; // tir moins fréquent
+                                }
+                            }
+                        }
+                        compteur_tir = 0;
+                    }
+
+                    for (int j = 0; j < MAX_TORPILLES; j++) {
+                        if (torpilles[j].actif) {
+                            BITMAP *img = poisson_imgs[poissons[i].type];
+                            if (torpilles[j].x > poissons[i].x && torpilles[j].x < poissons[i].x + img->w &&
+                                torpilles[j].y > poissons[i].y && torpilles[j].y < poissons[i].y + img->h) {
+                                poissons[i].clignote = 1;
+                                poissons[i].temps_touche = clock();
+                                torpilles[j].actif = 0;
+                            }
+                        }
+                    }
+                    if (poissons[i].clignote && clock() - poissons[i].temps_touche > TEMPS_CLIGNOTE * CLOCKS_PER_SEC / 1000)
+                        poissons[i].actif = 0;
+                    if (poissons[i].x < -100) poissons[i].actif = 0;
+                }
+            }
+
+            camera_x += VITESSE_SCROLL;
+            if (camera_x > LARGEUR_DECOR - LARGEUR_ECRAN)
+                camera_x = LARGEUR_DECOR - LARGEUR_ECRAN;
+        }
+
+        blit(decor, buffer, camera_x, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        int vx_aff = vaisseau_x - camera_x;
+
+        if (!clignote_vaisseau || ((clock() / 100) % 2 == 0))
+            masked_blit(vaisseau_img, buffer, 0, 0, vx_aff, vaisseau_y, vaisseau_img->w, vaisseau_img->h);
+        if (clock() - dernier_choc > 1000) clignote_vaisseau = 0;
+
+        for (int i = 0; i < MAX_TORPILLES; i++) {
+            if (torpilles[i].actif) {
+                int tx = torpilles[i].x - camera_x;
+                if (tx >= 0 && tx < LARGEUR_ECRAN)
+                    masked_blit(torpille_img, buffer, 0, 0, tx, torpilles[i].y, torpille_img->w, torpille_img->h);
+            }
+        }
+
+        for (int i = 0; i < MAX_BULLES; i++) {
+            if (bulles[i].actif) {
+                int bx = bulles[i].x - camera_x;
+                if (bx >= 0 && bx < LARGEUR_ECRAN)
+                    masked_blit(bulle_img, buffer, 0, 0, bx, bulles[i].y, bulle_img->w, bulle_img->h);
+            }
+        }
+
+        for (int i = 0; i < MAX_FEU; i++) {
+            if (feus[i].actif) {
+                int bx = feus[i].x - camera_x;
+                if (bx >= 0 && bx < LARGEUR_ECRAN)
+                    masked_blit(feu_img, buffer, 0, 0, bx, feus[i].y, feu_img->w, feu_img->h);
+            }
+        }
+        for (int i = 0; i < MAX_TIR; i++) {
+            if (tirs[i].actif) {
+                int bx = tirs[i].x - camera_x;
+                if (bx >= 0 && bx < LARGEUR_ECRAN)
+                    masked_blit(tir_img, buffer, 0, 0, bx, tirs[i].y, tir_img->w, tir_img->h);
+            }
+        }
+
+        for (int i = 0; i < MAX_POISSONS; i++) {
+            if (poissons[i].actif) {
+                int px = poissons[i].x - camera_x;
+                if (!poissons[i].clignote || ((clock() / 100) % 2 == 0))
+                    masked_blit(poisson_imgs[poissons[i].type], buffer, 0, 0, px, poissons[i].y,
+                                poisson_imgs[poissons[i].type]->w, poisson_imgs[poissons[i].type]->h);
+            }
+        }
+
+        for (int i = 0; i < vies; i++)
+            masked_blit(coeur_img, buffer, 0, 0, 10 + i * 35, 10, coeur_img->w, coeur_img->h);
+
+        int c = vaisseau_x * 100 / LARGEUR_DECOR;
+        int temps_ecoule = (int)(time(NULL) - debut_temps);
+
+        textprintf_ex(buffer, font, 350, 50, makecol(0, 0, 0), -1, "Niveau 3 : %d %%", c);
+        textprintf_ex(buffer, font, LARGEUR_ECRAN - 120, 10, makecol(255, 255, 255), -1, "Temps: %ds", temps_ecoule);
+        if (en_pause)
+            textprintf_centre_ex(buffer, font, LARGEUR_ECRAN / 2, HAUTEUR_ECRAN / 2, makecol(255, 0, 0), -1, "== PAUSE ==");
+
+        if (boss.actif) {
+            oscillation_timer++;
+            int amplitude = 30;
+            int offset = (int)(-amplitude * (sin(oscillation_timer * 0.10)));
+            if (offset > 0) offset = 0;
+            boss.y = boss.y_init + offset;
+            int boss_aff_x = boss.x - camera_x;
+            masked_blit(boss.spritesheet, buffer,
+                        boss.frame * BOSS_FRAME_WIDTH, 0,  // frame x
+                        boss_aff_x, boss.y,
+                        BOSS_FRAME_WIDTH, BOSS_FRAME_HEIGHT);
+            if (boss.actif) {
+                int bar_width = 200;
+                int bar_height = 20;
+                int filled_width = (boss.hp * bar_width) / 20;
+
+                rect(buffer, 300, 10, 300 + bar_width, 10 + bar_height, makecol(255, 255, 255));
+                rectfill(buffer, 300, 10, 300 + filled_width, 10 + bar_height, makecol(255, 0, 0));
+            }
+        }
+        for (int i = 0; i < MAX_MINES; i++) {
+            if (mines[i].actif) {
+                int ecran_x = mines[i].x - camera_x;
+                if (ecran_x >= -objet_img->w && ecran_x <= LARGEUR_ECRAN) {
+                    draw_sprite(buffer, objet_img, ecran_x, mines[i].y);
+                }
+            }
+        }
+
+        blit(buffer, screen, 0, 0, 0, 0, LARGEUR_ECRAN, HAUTEUR_ECRAN);
+        rest(20);
+    }
+
+    menu();
+    destroy_bitmap(buffer);
+    destroy_bitmap(decor);
+    destroy_bitmap(collision);
+    destroy_bitmap(vaisseau_img);
+    destroy_bitmap(torpille_img);
+    destroy_bitmap(coeur_img);
+    destroy_bitmap(bulle_img);
+    destroy_bitmap(boss_spritesheet);
+    destroy_bitmap(objet_img);
+    destroy_bitmap(feu_img);
+    destroy_bitmap(tir_img);
+    for (int i = 0; i < NB_TYPES_POISSONS; i++) destroy_bitmap(poisson_imgs[i]);
+}
