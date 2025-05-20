@@ -32,6 +32,7 @@
 #define DELAI_TIR_REQUIN 100
 #define DEGAT_REQUIN 50
 #define DEGAT_DENT 50
+#define MAX_DENTS 75
 
 #define DELAI_BULLE_BOSS 60
 #define BOSS_FRAME_COUNT 5
@@ -108,7 +109,6 @@ typedef struct {
     int clignote;
 } Requin;
 
-#define MAX_DENTS 50
 
 typedef struct {
     int actif;
@@ -133,6 +133,9 @@ BITMAP *etoile_img;
 
 BITMAP *poisson_imgs[NB_TYPES_POISSONS];
 BITMAP *coeur_img, *bulle_img;
+
+epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
+extern epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
 
 int positionValide(int x, int y, BITMAP *collision, BITMAP *vaisseau);
 int positionPoissonValide(int x, int y, BITMAP *img, BITMAP *collision);
@@ -162,17 +165,11 @@ int positionRequinValide(int x, int y, BITMAP *img, BITMAP *collision);
 void tireDent(int x, int y);
 void jouer_niveau3(void);
 
-extern epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
-
 void tirer_epine_etoile(int x, int y);
-epine_etoile_t epines_etoile[MAX_EPINES_ETOILE];
 
 void tireTorpilleSpeciale(int x, int y);
 extern int torpille_speciale_active;
 extern time_t temps_activation_torpille;
 extern BITMAP *torpille2_img;
-
-
-
 
 #endif //HEADER_H
