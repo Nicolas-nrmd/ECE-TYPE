@@ -1,0 +1,30 @@
+while (1) {
+        EcranMenu("Choisissez un niveau :", options, n_options, selection);
+
+        if (keypressed()) {
+            int k = readkey();
+            int scancode = k >> 8;
+
+            if (scancode == KEY_DOWN) {
+                selection = (selection + 1) % n_options;
+            } else if (scancode == KEY_UP) {
+                selection = (selection - 1 + n_options) % n_options;
+            } else if (scancode == KEY_ENTER) {
+                if (selection == 3) return;  // Retour
+
+                allegro_message("Lancement du niveau %d...", selection + 1);
+
+                if (selection == 0) {
+                    jouer_niveau1();
+                } else if (selection == 1) {
+                    jouer_niveau2();
+                } else if (selection == 2) {
+                    jouer_niveau3();
+                }
+            } else if (scancode == KEY_ESC) {
+                return;
+            }
+        }
+
+        rest(30);
+    }
