@@ -1,4 +1,4 @@
-#include "header2.h"
+#include "header.h"
 
 Torpille torpilles[MAX_TORPILLES];
 Poisson poissons[MAX_POISSONS];
@@ -143,13 +143,12 @@ void jouer_niveau3(void) {
     BITMAP *decor = load_bitmap("biome3.bmp", NULL);
     BITMAP *collision = load_bitmap("collision3.bmp", NULL);
     BITMAP *vaisseau_img = load_bitmap("sousmarin2.bmp", NULL);
-    BITMAP *torpille_img = load_bitmap("tir.bmp", NULL);
+    BITMAP *torpille_img = load_bitmap("torpille.bmp", NULL);
     coeur_img = load_bitmap("coeur.bmp", NULL);
     bulle_img = load_bitmap("bulle.bmp", NULL);
     feu_img = load_bitmap("feu.bmp", NULL);
     BITMAP *boss_spritesheet = load_bitmap("boss_spritesheet.bmp", NULL);
     BITMAP *objet_img = load_bitmap("mine.bmp", NULL);
-    tir_img = load_bitmap("tirs.bmp", NULL);
     tir_img = load_bitmap("tirs.bmp", NULL);
 
     Boss boss = {0};
@@ -168,7 +167,6 @@ void jouer_niveau3(void) {
         poisson_imgs[i] = load_bitmap(nom, NULL);
         if (!poisson_imgs[i]) {
             allegro_message("Erreur chargement %s", nom);
-            return 1;
         }
     }
     for (int i = 0; i < MAX_MINES; i++) {
@@ -194,6 +192,16 @@ void jouer_niveau3(void) {
     int boss_frame_timer = 0;
     int boss_frame_delay = 8;
     int boss_frame = 0;
+    int vie_temporaire = 100; // Jauge à 100%
+
+    int largeur_jauge_max = 100;
+    int hauteur_jauge = 10;
+    int x_jauge = 10;
+    int y_jauge = 10 + coeur_img->h + 5;
+    int largeur_jauge = largeur_jauge_max * vie_temporaire / 100;
+
+    rectfill(buffer, x_jauge, y_jauge, x_jauge + largeur_jauge, y_jauge + hauteur_jauge, makecol(255, 0, 0));
+    rect(buffer, x_jauge, y_jauge, x_jauge + largeur_jauge_max, y_jauge + hauteur_jauge, makecol(255, 255, 255));
 
 
     while (!key[KEY_ESC] && vies > 0) {
@@ -257,7 +265,6 @@ void jouer_niveau3(void) {
                                 boss.actif = 0;
                                 allegro_message("VICTOIRE ! Boss éliminé !");
                                 rest(2000);
-                                return 0;
                             }
                             }
                     }
