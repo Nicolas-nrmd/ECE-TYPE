@@ -514,6 +514,11 @@ void jouer_niveau3(void) {
                 rectfill(buffer, 300, 10, 300 + filled_width, 10 + bar_height, makecol(255, 0, 0));
             }
         }
+
+        if (boss.hp == 0) {
+            return 0;
+        }
+        
         for (int i = 0; i < MAX_MINES; i++) {
             if (mines[i].actif) {
                 int ecran_x = mines[i].x - camera_x;
