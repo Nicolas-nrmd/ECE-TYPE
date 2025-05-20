@@ -20,6 +20,12 @@
 #define MAX_BULLES 100
 #define TEMPS_CLIGNOTE 100
 #define DELAI_BULLE 100
+#define BOSS_FRAME_COUNT 5
+#define BOSS_FRAME_WIDTH 187
+#define BOSS_FRAME_HEIGHT 159
+#define MAX_MINES 10
+#define MAX_FEU 50
+#define MAX_TIR 50
 
 #define MAX_PSEUDO 20
 #define FICHIER_SAUVEGARDE "sauvegardes.txt"
@@ -38,6 +44,27 @@
 #define BOSS_FRAME_COUNT 5
 #define BOSS_FRAME_WIDTH 187
 #define BOSS_FRAME_HEIGHT 159
+
+typedef struct {
+    int actif;
+    float x, y;
+    float dx, dy;
+} Tir;
+
+Tir tirs[MAX_TIR];
+
+typedef struct {
+    int actif;
+    float x, y;
+    float dx, dy;
+} Feu;
+
+Feu feus[MAX_FEU];
+
+typedef struct {
+    int x, y;
+    int actif;
+} Mine;
 
 typedef struct {
     int x, y;
